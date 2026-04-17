@@ -11,40 +11,49 @@
     <el-tabs
       v-model="activeName"
       class="index-tabs"
-      tab-position="bottom"
-      @tab-click="handleClick">
+      tab-position="bottom">
       
       <el-tab-pane name="indexPage">
-        <template #label>
-          <div class="nav-item">
-            <el-icon><HomeFilled /></el-icon>
-            <span class="nav-label">首页</span>
-          </div>
-        </template>
         <IndexPage @navigate="handleNavigate" />
       </el-tab-pane>
       
       <el-tab-pane name="aiDialogue">
-        <template #label>
-          <div class="nav-item">
-            <el-icon><ChatLineRound /></el-icon>
-            <span class="nav-label">AI对话</span>
-          </div>
-        </template>
         <AiDialoguePage :active-tab="activeName" />
       </el-tab-pane>
       
       <el-tab-pane name="settingPage">
-        <template #label>
-          <div class="nav-item">
-            <el-icon><Setting /></el-icon>
-            <span class="nav-label">设置</span>
-          </div>
-        </template>
         <SettingPage />
       </el-tab-pane>
       
     </el-tabs>
+
+    <!-- 自定义底部导航栏 -->
+    <div class="custom-bottom-nav">
+      <div 
+        class="nav-item" 
+        :class="{ active: activeName === 'indexPage' }"
+        @click="activeName = 'indexPage'"
+      >
+        <el-icon><HomeFilled /></el-icon>
+        <span class="nav-label">首页</span>
+      </div>
+      <div 
+        class="nav-item" 
+        :class="{ active: activeName === 'aiDialogue' }"
+        @click="activeName = 'aiDialogue'"
+      >
+        <el-icon><ChatLineRound /></el-icon>
+        <span class="nav-label">AI对话</span>
+      </div>
+      <div 
+        class="nav-item" 
+        :class="{ active: activeName === 'settingPage' }"
+        @click="activeName = 'settingPage'"
+      >
+        <el-icon><Setting /></el-icon>
+        <span class="nav-label">设置</span>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -201,35 +210,49 @@ html, body {
   flex-direction: column;
 }
 
+/* 隐藏原本的 el-tabs 头部，改用自定义底部导航 */
 .index-tabs :deep(.el-tabs__header) {
-  margin: 0px !important;
-  padding: 5px 0 !important;
-  position: absolute;
+  display: none !important;
+}
+
+.custom-bottom-nav {
+  position: fixed;
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  height: 60px;
   background: var(--app-tabs-header-bg);
-  border-top: 1px solid var(--app-tabs-header-border-color);
   backdrop-filter: blur(var(--app-tabs-header-blur)) saturate(180%);
   -webkit-backdrop-filter: blur(var(--app-tabs-header-blur)) saturate(180%);
+  border-top: 1px solid var(--app-tabs-header-border-color);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
-  display: flex !important;
-  justify-content: center !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding-bottom: env(safe-area-inset-bottom); /* 适配刘海屏底部 */
 }
 
 .nav-item {
+  flex: 1;
+  max-width: 120px;
+  height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
-  width: 100%;
+  color: #909399;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.nav-item.active {
+  color: var(--el-color-primary);
 }
 
 .nav-item .el-icon {
-  font-size: 22px;
-  margin-bottom: 2px;
+  font-size: 24px;
+  margin-bottom: 4px;
 }
 
 .nav-label {
@@ -238,58 +261,12 @@ html, body {
   line-height: 1;
 }
 
-.index-tabs :deep(.el-tabs__nav-wrap) {
-  width: 100% !important;
-  max-width: 500px !important;
-  display: flex !important;
-  justify-content: center !important;
-}
-
-.index-tabs :deep(.el-tabs__nav-wrap::after) {
-  display: none !important;
-}
-
-.index-tabs :deep(.el-tabs__nav-scroll) {
-  width: 100% !important;
-  display: flex !important;
-  justify-content: center !important;
-}
-
-.index-tabs :deep(.el-tabs__nav) {
-  display: flex !important;
-  width: 100% !important;
-  justify-content: space-around !important;
-  float: none !important;
-}
-
-.index-tabs :deep(.el-tabs__item) {
-  flex: 1 !important;
-  height: 55px !important;
-  padding: 0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  color: #909399;
-}
-
-.index-tabs :deep(.el-tabs__item.is-active) {
-  color: var(--el-color-primary);
-}
-
-.index-tabs :deep(.el-tabs__active-bar) {
-  display: none; /* 底部导航通常不需要下划线 */
-}
-
-.index-tabs .el-tabs__nav-wrap::after {
-  display: none;
-}
-
 .index-tabs .el-tabs__content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: 60px; /* 为底部导航预留空间 */
+  padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* 为自定义底部导航预留空间 */
   box-sizing: border-box;
   background: transparent;
   
