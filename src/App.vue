@@ -192,15 +192,41 @@ html, body {
     height: 20px;
   }
 
-  .index-tabs :deep(.el-tabs__item) {
+  .index-tabs .el-tabs__item {
     font-size: 14px;
     height: 60px;
   }
   
-  .index-tabs .el-tabs__content {
+  .version-tag {
+  position: fixed;
+  bottom: 2px;
+  right: 5px;
+  font-size: 8px;
+  color: rgba(0, 0, 0, 0.2);
+  z-index: 1001;
+  pointer-events: none;
+}
+
+html.dark .version-tag {
+  color: rgba(255, 255, 255, 0.1);
+}
+
+.index-tabs .el-tabs__content {
     padding: 0;
     padding-bottom: 60px;
   }
+}
+
+/* 强制隐藏所有 Element Plus 选项卡头部 */
+:deep(.el-tabs__header),
+.el-tabs__header {
+  display: none !important;
+  height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 .index-tabs {
@@ -211,7 +237,7 @@ html, body {
 }
 
 /* 隐藏原本的 el-tabs 头部，改用自定义底部导航 */
-.index-tabs :deep(.el-tabs__header) {
+.index-tabs .el-tabs__header {
   display: none !important;
 }
 
