@@ -17,10 +17,10 @@
         <p class="welcome-subtitle">为您智能推荐导游路线和旅游项目</p>
         <!-- 精选景点走马灯 -->
         <div class="carousel-section">
-          <el-carousel :interval="4000" :height="carouselHeight" class="custom-carousel" :type="carouselType">
-            <el-carousel-item v-for="(img, index) in recommendPlaces" :key="index">
+          <el-carousel :interval="4000" :height="carouselHeight" class="custom-carousel">
+            <el-carousel-item v-for="item in 8" :key="item">
               <div class="carousel-item-content">
-                <img :src="img" :alt="'place' + (index + 1)" class="carousel-image" />
+                <img :src="recommendPlaces[item - 1]" :alt="'place' + item" class="carousel-image" />
               </div>
             </el-carousel-item>
           </el-carousel>
@@ -310,8 +310,8 @@ const checkMobile = () => {
 }
 
 const drawerSize = computed(() => isMobile.value ? '100%' : '900px')
-const carouselHeight = computed(() => isMobile.value ? '250px' : '425px')
-const carouselType = computed(() => isMobile.value ? '' : 'card')
+const carouselHeight = computed(() => isMobile.value ? '32vh' : '425px') // 从 40vh 下调到 32vh，留出更多空间给按钮
+const carouselType = computed(() => isMobile.value ? 'card' : 'card')
 
 //表单验证函数：确保每个选项问题都有值
 const isFormValid = computed(() => {
@@ -482,7 +482,7 @@ onUnmounted(() => {
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-  padding: 20px 0;
+  padding: 3vh 0; /* 略微下调垂直边距 */
   position: relative;
   z-index: 1;
 }
@@ -515,7 +515,7 @@ html.dark .pageGuideArrow{
 
 .title-image-wrapper {
   width: 100%;
-  margin-top: 5vh;
+  margin-top: 8vh; /* 略微下调顶部间距 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -524,11 +524,11 @@ html.dark .pageGuideArrow{
 }
 
 .title-image {
-  width: 85%;
-  max-width: 500px;
+  width: 85%; /* 375宽度下稍微收缩 */
+  max-width: 600px;
   height: auto;
   object-fit: contain;
-  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.1));
+  filter: drop-shadow(0 10px 20px rgba(0,0,0,0.12));
 }
 
 .parallax-back-1 {
@@ -577,43 +577,43 @@ html.dark .parallax-overlay {
 }
 
 .welcome-title {
-  font-size: 48px;
+  font-size: 42px; /* 从 48px 下调 */
   color: #3b94ec;
-  margin-bottom: 8px;
+  margin-bottom: 5px;
   font-weight: 800;
-  letter-spacing: 2px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.05);
+  letter-spacing: 1px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
 .welcome-subtitle {
-  font-size: 18px;
+  font-size: 16px; /* 从 18px 下调 */
   color: #5ea6f0;
-  margin: 5px 0;
+  margin: 3px 0;
   font-weight: 500;
 }
 
 .carousel-section {
   width: 100%;
-  margin-top: 30px;
-  border-radius: 16px;
+  margin-top: 15px; /* 减少间距 */
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
 }
 
 .action-buttons {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  margin-top: 40px;
+  margin-top: 3vh; /* 使用 vh 保持灵活 */
   width: 100%;
   max-width: 320px;
 }
 
 .big-action-btn {
-  height: 54px !important;
-  font-size: 17px !important;
+  height: 54px !important; /* 从 60px 回归 54px */
+  font-size: 16px !important;
   border-radius: 12px !important;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1) !important;
+  box-shadow: 0 6px 15px rgba(0,0,0,0.1) !important;
 }
 
 @media (max-width: 768px) {

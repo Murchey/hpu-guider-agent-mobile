@@ -163,17 +163,18 @@ html, body {
 }
 
 .header-controls {
-  position: absolute;
-  top: 15px;
+  position: fixed; /* 改为 fixed 以便在长滚屏页面中始终可见 */
+  top: calc(10px + env(safe-area-inset-top)); /* 考虑手机顶部的安全区域（如灵动岛、挖孔） */
   right: 20px;
-  z-index: 200;
+  z-index: 2000;
   display: flex;
   align-items: center;
   background: var(--app-tabs-header-bg);
-  padding: 4px 8px;
-  border-radius: 20px;
-  backdrop-filter: blur(10px);
+  padding: 6px 12px;
+  border-radius: 25px;
+  backdrop-filter: blur(15px);
   border: 1px solid var(--app-tabs-header-border-color);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
 /* 响应式适配：移动端 (屏幕宽度 <= 768px) */
@@ -246,22 +247,22 @@ html.dark .version-tag {
   bottom: 0;
   left: 0;
   right: 0;
-  height: 60px;
+  height: 65px; /* 从 70px 略微下调，更适合 812px 高度 */
   background: var(--app-tabs-header-bg);
   backdrop-filter: blur(var(--app-tabs-header-blur)) saturate(180%);
   -webkit-backdrop-filter: blur(var(--app-tabs-header-blur)) saturate(180%);
   border-top: 1px solid var(--app-tabs-header-border-color);
-  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.08);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
-  padding-bottom: env(safe-area-inset-bottom); /* 适配刘海屏底部 */
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-item {
   flex: 1;
-  max-width: 120px;
+  max-width: 120px; /* 回归紧凑宽度 */
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -269,21 +270,17 @@ html.dark .version-tag {
   justify-content: center;
   color: #909399;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nav-item.active {
-  color: var(--el-color-primary);
+  transition: all 0.3s ease;
 }
 
 .nav-item .el-icon {
-  font-size: 24px;
-  margin-bottom: 4px;
+  font-size: 24px; /* 稍微缩小图标 */
+  margin-bottom: 3px;
 }
 
 .nav-label {
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 11px; /* 字体微调，更符合 375 宽度 */
+  font-weight: 600;
   line-height: 1;
 }
 
@@ -292,7 +289,7 @@ html.dark .version-tag {
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: calc(60px + env(safe-area-inset-bottom)); /* 为自定义底部导航预留空间 */
+  padding-bottom: calc(70px + env(safe-area-inset-bottom)); /* 匹配导航栏高度 */
   box-sizing: border-box;
   background: transparent;
   

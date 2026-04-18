@@ -188,7 +188,7 @@ const checkMobile = () => {
 }
 
 const dialogWidth = computed(() => isMobile.value ? '95%' : '900px')
-const emptyImageSize = computed(() => isMobile.value ? 120 : 200)
+const emptyImageSize = computed(() => isMobile.value ? 140 : 250) // 针对 375x812 屏幕下调尺寸，避免遮挡输入框
 
 // 场景推荐对话框状态
 const sceneDialogVisible = ref(false)
@@ -216,11 +216,11 @@ const modeOptionsBtnGroup = computed(() => {
 })
 
 const apiSettings = ref({
-  provider: 'openai',
-  baseURL: '',
-  apiKey: '',
-  model: 'gpt-3.5-turbo',
-  botId: ''
+  provider: 'coze',
+  baseURL: 'https://api.coze.cn',
+  apiKey: 'pat_dwOqipNExoqRFtk4RkKhyj3IkxvaMPU2ozUrle8yvhleoJe6OCIEXWVvfbCH4GlA',
+  model: '',
+  botId: '7622230218706731042'
 })
 
 const isSettingsLoaded = ref(false)
