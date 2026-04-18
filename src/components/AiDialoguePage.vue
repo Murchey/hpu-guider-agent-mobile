@@ -23,6 +23,14 @@
             <div class="message-role">
               {{ msg.role === 'user' ? '你' : '文途智行' }}
             </div>
+            <div v-if="msg.imageUrl" class="message-image-wrapper">
+              <el-image 
+                :src="msg.imageUrl" 
+                class="message-image" 
+                fit="cover" 
+                :preview-src-list="[msg.imageUrl]"
+              />
+            </div>
             <el-card class="message-card" :class="msg.role">
               <div class="message-text" v-html="msg.role === 'assistant' ? formatAssistantMessage(msg.content) : formatMessage(msg.content)"></div>
             </el-card>
@@ -48,14 +56,39 @@
             <div class="mode-change-btn">
               <el-segmented v-model="modeValue" :options="modeOptions" />
             </div>
-          <el-button
-            class="chat-toolbar-clear"
-            type="danger"
-            :disabled="messages.length === 0 || isLoading"
-            @click="clearChat"
+          <el-upload
+            class="chat-toolbar-upload"
+            action="#"
+            :auto-upload="false"
+            :show-file-list="false"
+            accept="image/*"
+            :on-change="handleFileChange"
+            :disabled="isLoading"
           >
-            清空聊天
-          </el-button>
+            <el-button
+              type="primary"
+              :disabled="isLoading"
+              size="small"
+            >
+              <el-icon><Picture /></el-icon>
+              上传图片
+            </el-button>
+          </el-upload>
+        </div>
+        <div v-if="uploadedImageUrl" class="image-preview-container">
+          <div class="image-preview-wrapper">
+            <el-image 
+              :src="uploadedImageUrl" 
+              class="image-preview" 
+              fit="cover"
+              :preview-src-list="[uploadedImageUrl]"
+            />
+            <el-icon class="remove-image-btn" @click="removeUploadedImage"><CircleClose /></el-icon>
+          </div>
+          <div v-if="isUploadingImage" class="upload-loading-overlay">
+            <el-icon class="is-loading"><Loading /></el-icon>
+            <span>上传中...</span>
+          </div>
         </div>
         <div class="chat-input-row">
           <div class="chat-textarea">
@@ -161,7 +194,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
-import { Loading, User, ChatDotRound, Promotion } from '@element-plus/icons-vue'
+import { Loading, User, ChatDotRound, Promotion, Picture, CircleClose } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import axios from 'axios'
 import MarkdownIt from 'markdown-it'
@@ -170,6 +203,7 @@ import agentIcon from '../assets/agent_icon.jpg'
 interface Message {
   role: 'user' | 'assistant'
   content: string
+  imageUrl?: string
 }
 
 const props = defineProps<{
@@ -180,6 +214,94 @@ const messages = ref<Message[]>([])
 const inputText = ref('')
 const isLoading = ref(false)
 const messagesRef = ref<HTMLElement | null>(null)
+
+// 图片上传相关
+const uploadedImageUrl = ref('')
+const uploadedFileId = ref('')
+const isUploadingImage = ref(false)
+
+const handleFileChange = async (file: any) => {
+  const rawFile = file.raw
+  if (!rawFile) return
+
+  // 限制图片大小 10MB
+  if (rawFile.size / 1024 / 1024 > 10) {
+    ElMessage.error('图片大小不能超过 10MB')
+    return
+  }
+
+  // 根据模式处理图片
+  const { imageMode } = apiSettings.value
+  
+  if (imageMode === 'coze') {
+    // 生成预览
+    uploadedImageUrl.value = URL.createObjectURL(rawFile)
+    // 自动上传到 Coze
+    await uploadImageToCoze(rawFile)
+  } else {
+    // Base64 模式 (适配硅基流动等)
+    isUploadingImage.value = true
+    try {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string
+        uploadedImageUrl.value = base64
+        uploadedFileId.value = base64 // 在 base64 模式下，直接存 base64 字符串
+        ElMessage.success('图片已就绪')
+        isUploadingImage.value = false
+      }
+      reader.onerror = () => {
+        throw new Error('图片读取失败')
+      }
+      reader.readAsDataURL(rawFile)
+    } catch (error: any) {
+      ElMessage.error(error.message)
+      isUploadingImage.value = false
+    }
+  }
+}
+
+const removeUploadedImage = () => {
+  uploadedImageUrl.value = ''
+  uploadedFileId.value = ''
+}
+
+const uploadImageToCoze = async (file: File) => {
+  if (!apiSettings.value.apiKey) {
+    ElMessage.warning('上传图片需要先配置 API Key')
+    return
+  }
+
+  isUploadingImage.value = true
+  try {
+    const { baseURL, apiKey } = apiSettings.value
+    // Coze 文件上传地址固定为 /v1/files/upload
+    const uploadURL = baseURL.replace(/\/v3\/chat$/, '').replace(/\/+$/, '') + '/v1/files/upload'
+    
+    const formData = new FormData()
+    formData.append('file', file)
+
+    const response = await axios.post(uploadURL, formData, {
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    if (response.data && response.data.data && response.data.data.id) {
+      uploadedFileId.value = response.data.data.id
+      ElMessage.success('图片上传成功')
+    } else {
+      throw new Error(response.data.msg || '上传失败')
+    }
+  } catch (error: any) {
+    console.error('上传图片到 Coze 失败:', error)
+    ElMessage.error('上传图片失败: ' + (error.response?.data?.msg || error.message))
+    removeUploadedImage()
+  } finally {
+    isUploadingImage.value = false
+  }
+}
 
 // 响应式判断
 const isMobile = ref(false)
@@ -220,31 +342,36 @@ const apiSettings = ref({
   baseURL: 'https://api.coze.cn',
   apiKey: 'pat_dwOqipNExoqRFtk4RkKhyj3IkxvaMPU2ozUrle8yvhleoJe6OCIEXWVvfbCH4GlA',
   model: '',
-  botId: '7622230218706731042'
+  botId: '7622230218706731042',
+  imageMode: 'coze'
 })
 
 const isSettingsLoaded = ref(false)
 
-const providerConfigs: Record<string, { baseURL: string; model: string; name: string }> = {
+const providerConfigs: Record<string, { baseURL: string; model: string; name: string; imageMode?: string }> = {
   openai: {
     baseURL: 'https://api.openai.com/v1',
     model: 'gpt-3.5-turbo',
-    name: 'OpenAI'
+    name: 'OpenAI',
+    imageMode: 'base64'
   },
   siliconflow: {
     baseURL: 'https://api.siliconflow.cn/v1',
     model: 'Qwen/Qwen2.5-7B-Instruct',
-    name: '硅基流动'
+    name: '硅基流动',
+    imageMode: 'base64'
   },
   coze: {
     baseURL: 'https://api.coze.cn',
     model: '',
-    name: 'Coze'
+    name: 'Coze',
+    imageMode: 'coze'
   },
   custom: {
     baseURL: '',
     model: '',
-    name: '自定义'
+    name: '自定义',
+    imageMode: 'base64'
   }
 }
 
@@ -263,6 +390,12 @@ const loadSettings = () => {
       const parsed = JSON.parse(saved)
       console.log('加载到的 API 配置:', { ...parsed, apiKey: parsed.apiKey ? '***' : '未设置' })
       apiSettings.value = { ...apiSettings.value, ...parsed }
+      
+      // 兼容旧配置：如果没设置 imageMode，根据 provider 给默认值
+      if (!apiSettings.value.imageMode) {
+        apiSettings.value.imageMode = apiSettings.value.provider === 'coze' ? 'coze' : 'base64'
+      }
+      
       isSettingsLoaded.value = true
     } catch (e) {
       console.error('加载设置失败', e)
@@ -368,8 +501,20 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
   // 将当前消息加入请求列表
   requestMessages.push({ role: 'user', content: text })
 
+  // 记录本次发送的图片（如果有）
+  const currentImageUrl = uploadedImageUrl.value
+  const currentFileId = uploadedFileId.value
+  
+  // 清除输入区图片状态
+  uploadedImageUrl.value = ''
+  uploadedFileId.value = ''
+
   if (showUserMessage) {
-    messages.value.push({ role: 'user', content: text })
+    messages.value.push({ 
+      role: 'user', 
+      content: text,
+      imageUrl: currentImageUrl 
+    })
     await scrollToBottom()
   }
 
@@ -380,7 +525,7 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
   isLoading.value = true
 
   try {
-    const { baseURL, apiKey, model, provider, botId } = apiSettings.value
+    const { baseURL, apiKey, model, provider, botId, imageMode } = apiSettings.value
     
     let finalBaseURL = baseURL || providerConfigs[provider]?.baseURL || ''
     if (!finalBaseURL) {
@@ -392,9 +537,15 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
 
     let aiContent = ''
 
-    if (provider === 'coze') {
+    if (imageMode === 'coze') {
       if (!botId) throw new Error('Coze 模式下必须配置 Bot ID')
       
+      // 构建 Coze 多模态内容 (object_string)
+      const contentList: any[] = [{ type: 'text', text: text }]
+      if (currentFileId) {
+        contentList.push({ type: 'image', file_id: currentFileId })
+      }
+
       const response = await fetch(`${finalBaseURL}/v3/chat`, {
         method: 'POST',
         headers: {
@@ -406,8 +557,8 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
           user_id: 'user_' + Math.random().toString(36).substr(2, 9),
           additional_messages: [{
             role: 'user',
-            content: text,
-            content_type: 'text'
+            content: JSON.stringify(contentList),
+            content_type: 'object_string'
           }],
           stream: true
         })
@@ -471,7 +622,24 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
         }
       }
     } else {
-      // OpenAI 兼容 API 流式
+      // OpenAI 兼容 API 流式 (支持 Base64 多模态)
+      let finalMessages: any[] = [...requestMessages]
+      
+      // 如果有图片，替换最后一条消息为多模态格式
+      if (currentFileId && currentFileId.startsWith('data:image')) {
+        const lastMsg = finalMessages.pop()
+        finalMessages.push({
+          role: 'user',
+          content: [
+            { type: 'text', text: lastMsg?.content || text },
+            { 
+              type: 'image_url', 
+              image_url: { url: currentFileId } 
+            }
+          ]
+        })
+      }
+
       const response = await fetch(`${finalBaseURL}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -480,7 +648,7 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
         },
         body: JSON.stringify({
           model: model,
-          messages: requestMessages,
+          messages: finalMessages,
           stream: true
         })
       })
@@ -599,6 +767,7 @@ onMounted(async () => {
   await loadSettings()
   await nextTick()
   await new Promise(resolve => setTimeout(resolve, 300))
+  checkAndSendInitialPrompt()
   checkAndSendUserProfile()
   checkAndSendSocialRequest()
 })
@@ -610,10 +779,47 @@ onUnmounted(() => {
 watch(() => props.activeTab, (newTab) => {
   if (newTab === 'aiDialogue') {
     loadSettings() // 切换到 AI 页面时重新加载配置
+    checkAndSendInitialPrompt()
     checkAndSendUserProfile()
     checkAndSendSocialRequest()
   }
 })
+
+const checkAndSendInitialPrompt = () => {
+  const pendingPrompt = localStorage.getItem('pending-initial-prompt')
+  const shouldAutoSend = localStorage.getItem('should-auto-send-prompt') === 'true'
+  
+  if (pendingPrompt) {
+    if (shouldAutoSend) {
+      // 只有从设置页面点击按钮过来时，才自动发送
+      sendInitialPromptWithRetry(pendingPrompt)
+      console.log('检测到跳转指令，开始自动发送提示词')
+    } else {
+      // 否则（如刚进入软件时），仅填入输入框，不自动发送
+      inputText.value = pendingPrompt
+      console.log('检测到缓存提示词，已填入输入框')
+    }
+    // 无论哪种情况，都清除自动发送标记，防止刷新页面重复触发
+    localStorage.removeItem('should-auto-send-prompt')
+    localStorage.removeItem('pending-initial-prompt')
+  }
+}
+
+const sendInitialPromptWithRetry = async (prompt: string) => {
+  const maxRetries = 3
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      // 等待设置加载完成
+      await new Promise(resolve => setTimeout(resolve, 800 + i * 500))
+      await handleSendHidden(prompt)
+      console.log('初始化提示词自动发送成功')
+      return true
+    } catch (error) {
+      console.error(`自动发送初始化提示词失败，第 ${i + 1} 次尝试:`, error)
+    }
+  }
+  return false
+}
 
 const checkAndSendSocialRequest = () => {
   const socialPrompt = localStorage.getItem('social-post-request')
@@ -929,6 +1135,72 @@ html.dark .message-card.assistant {
   /* ========= 可自定义：AI聊天框（深色模式）颜色 ========= */
   background: #2F2F30;
   border-color: #29292A;
+}
+
+/* 图片上传与预览相关样式 */
+.chat-toolbar-upload {
+  margin-left: auto;
+}
+
+.image-preview-container {
+  padding: 10px 15px;
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color-light);
+  display: flex;
+  align-items: center;
+}
+
+.image-preview-wrapper {
+  position: relative;
+  width: 60px;
+  height: 60px;
+}
+
+.image-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--el-border-color);
+}
+
+.remove-image-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  font-size: 18px;
+  color: var(--el-color-danger);
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 1;
+}
+
+.upload-loading-overlay {
+  margin-left: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.message-image-wrapper {
+  margin-bottom: 8px;
+  width: 50px;
+  height: 40px;
+  overflow: hidden;
+  border-radius: 6px;
+  border: 1px solid var(--el-border-color-lighter);
+}
+
+.message-image {
+  width: 100%;
+  height: 100%;
+  cursor: zoom-in;
+}
+
+.message-item.user .message-image-wrapper {
+  margin-left: auto;
 }
 
 html.dark .message-card.user .message-text {

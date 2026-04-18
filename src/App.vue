@@ -96,6 +96,17 @@ const handleThemeChange = (val: string | number | boolean) => {
 
 onMounted(() => {
   loadTheme()
+
+  // 处理手机切屏/后台挂起逻辑
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+      console.log('App 进入后台，保存关键状态...')
+      // 可以在此处停止耗时的动画或轮询
+    } else {
+      console.log('App 返回前台，恢复状态...')
+      // 可以在此处检查配置是否需要重载
+    }
+  })
 })
 </script>
 
