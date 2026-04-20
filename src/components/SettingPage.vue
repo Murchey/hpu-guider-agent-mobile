@@ -84,11 +84,23 @@
       <template #header>
         <div class="card-header">
           <el-icon><ChatDotRound /></el-icon>
-          <span>初始化提示词</span>
+          <span>对话高级设置</span>
         </div>
       </template>
       <div class="tips">
         <div class="api-item">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="label">发送前置工作模式提示</span>
+            <el-switch
+              v-model="enableModePrefix"
+              active-text="开启"
+              inactive-text="关闭"
+              @change="saveModePrefixSetting"
+            />
+          </div>
+          <p class="prompt-hint" style="text-align: left; margin-top: 4px;">开启后，每次发送消息会自动附加如“model：智能导游 工作模式（task_type）：互动问答”等前置内容。</p>
+        </div>
+        <div class="api-item" style="margin-top: 15px;">
           <span class="label">预设提示词 (System Prompt)</span>
           <el-input
             v-model="systemPrompt"
@@ -116,6 +128,11 @@ import { Setting, Refresh, Link, Edit, ChatDotRound, Promotion } from '@element-
 import { ElMessage } from 'element-plus'
 
 const showCustomSettings = ref(false)
+const enableModePrefix = ref(true)
+
+const saveModePrefixSetting = (val: boolean) => {
+  localStorage.setItem('enable-mode-prefix', String(val))
+}
 const systemPrompt = ref(`## 1. 角色定义
 你是一位名为“文途智行”的智慧导游助手。你不仅拥有渊博的历史文化知识，还能根据用户的个性化需求（用户画像）提供保姆级的旅行规划和现场讲解。你的语气应亲切、专业且富有感染力。
 
@@ -242,6 +259,12 @@ const applyManualApiSettings = () => {
   const savedPrompt = localStorage.getItem('saved-system-prompt')
   if (savedPrompt) {
     systemPrompt.value = savedPrompt
+  }
+
+  // 加载前置内容开关配置
+  const savedModePrefix = localStorage.getItem('enable-mode-prefix')
+  if (savedModePrefix !== null) {
+    enableModePrefix.value = savedModePrefix === 'true'
   }
 
   // 只有当本地没有配置时，才初始化默认的 Coze 配置

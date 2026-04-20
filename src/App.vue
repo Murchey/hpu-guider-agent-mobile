@@ -22,7 +22,7 @@
       </el-tab-pane>
       
       <el-tab-pane name="settingPage">
-        <SettingPage />
+        <SettingPage @navigate="handleNavigate" />
       </el-tab-pane>
       
     </el-tabs>

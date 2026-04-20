@@ -1,14 +1,14 @@
 <template>
-  <div class="index-page" :style="parallaxStyle">
-    <div class="parallax-container" aria-hidden="true">
-      <div class="parallax-layer parallax-back parallax-back-1"></div>
+  <div class="index-page">
+    <div class="static-bg-container" aria-hidden="true">
+      <div class="static-bg-layer bg-back-1"></div>
       
       <div class="title-image-wrapper">
         <img :src="titleBackImg" class="title-image" aria-hidden="true" />
       </div>
 
-      <div class="parallax-layer parallax-front parallax-front-1"></div>
-      <div class="parallax-overlay"></div>
+      <div class="static-bg-layer bg-front-1"></div>
+      <div class="bg-overlay"></div>
     </div>
     <section class="panel panel-1">
       <div class="welcome-container">
@@ -30,10 +30,10 @@
         <!-- 操作按钮 -->
         <div class="action-buttons">
           <el-button type="primary" size="large" round @click="dialogFormVisible = true" class="big-action-btn">
-            生成用户画像
+            让智能体更懂你
           </el-button>
           <el-button type="success" size="large" round @click="handleSocialPublish" class="big-action-btn">
-            社交平台发布
+            分享旅游经历
           </el-button>
         </div>
 
@@ -223,7 +223,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from 'vue'
+import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { ElNotification } from 'element-plus'
 import frontImg from '../assets/FRONT_IMG.png'
 import backImg from '../assets/BACK_IMG.png'
@@ -320,9 +320,6 @@ const isFormValid = computed(() => {
          form.startDate && form.travelMethod && form.originPlace;
 });
 
-const parallaxScroll = ref(0)
-let parallaxScrollEl: HTMLElement | null = null
-
 const handleSocialPublish = () => {
   socialDrawerVisible.value = true
 }
@@ -347,23 +344,6 @@ const handleSocialConfirm = () => {
     type: 'success',
   })
 }
-
-const handleParallaxScroll = () => {
-  if (!parallaxScrollEl) return
-  requestAnimationFrame(() => {
-    if (!parallaxScrollEl) return
-    parallaxScroll.value = parallaxScrollEl.scrollTop || 0
-  })
-}
-
-const parallaxStyle = computed(() => {
-  return {
-    '--parallax-scroll': `${parallaxScroll.value}px`,
-    '--parallax-back-1': `url(${backImg})`,
-    '--parallax-title-back': `url(${titleBackImg})`,
-    '--parallax-front-1': `url(${frontImg})`
-  }
-})
 
 const handleConfirm = () =>{
   if (!isFormValid.value) {
@@ -404,17 +384,10 @@ const afterConfirmMsgBox = () => {
 onMounted(() => {
   checkMobile()
   window.addEventListener('resize', checkMobile)
-  nextTick(() => {
-    parallaxScrollEl = document.querySelector('.index-tabs .el-tabs__content') as HTMLElement | null
-    parallaxScrollEl?.addEventListener('scroll', handleParallaxScroll, { passive: true })
-    handleParallaxScroll()
-  })
 })
 
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
-  parallaxScrollEl?.removeEventListener('scroll', handleParallaxScroll)
-  parallaxScrollEl = null
 })
 </script>
 
@@ -457,7 +430,7 @@ onUnmounted(() => {
 .carousel-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain; /* 改为 contain，确保图片全貌显示不被裁剪 */
   border-radius: 12px;
 }
 
@@ -487,7 +460,7 @@ onUnmounted(() => {
   z-index: 1;
 }
 
-.parallax-container {
+.static-bg-container {
   position: fixed;
   inset: 0;
   pointer-events: none;
@@ -502,15 +475,12 @@ html.dark .pageGuideArrow{
   color: rgb(4, 99, 140);
 }
 
-.parallax-layer {
+.static-bg-layer {
   position: absolute;
   inset: 0;
   background-repeat: no-repeat;
   background-position: center bottom;
   background-size: cover;
-  transform: translate3d(0, 0, 0);
-  will-change: transform, opacity;
-  transition: opacity 0.3s ease-out;
 }
 
 .title-image-wrapper {
@@ -531,21 +501,20 @@ html.dark .pageGuideArrow{
   filter: drop-shadow(0 10px 20px rgba(0,0,0,0.12));
 }
 
-.parallax-back-1 {
-  background-image: var(--parallax-back-1);
-  transform: translate3d(0, calc(var(--parallax-scroll) * -0.06), 0);
+.bg-back-1 {
+  background-image: url('../assets/BACK_IMG.png');
   z-index: 1;
 }
 
-.parallax-front-1 {
-  background-image: var(--parallax-front-1);
-  background-size: cover;
-  transform: translate3d(0, calc(var(--parallax-scroll) * -0.14), 0);
+.bg-front-1 {
+  background-image: url('../assets/FRONT_IMG.png');
+  background-size: 250%;
+  background-position: center 30%;
   z-index: 10;
   pointer-events: none;
 }
 
-.parallax-overlay {
+.bg-overlay {
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -558,7 +527,7 @@ html.dark .pageGuideArrow{
   pointer-events: none;
 }
 
-html.dark .parallax-overlay {
+html.dark .bg-overlay {
   background: linear-gradient(
     to bottom,
     rgba(29, 30, 31, 0.8) 0%,
@@ -644,8 +613,20 @@ html.dark .parallax-overlay {
   z-index: 3;
   display: flex;
   justify-content: center;
-  gap: 40px;
+  align-items: center; /* 确保垂直方向也居中 */
+  gap: 20px; /* 调整间距，如果屏幕小可能需要换行或改小间距 */
   margin-top: 40px;
+  width: 100%; /* 占满宽度以允许内容居中 */
+  max-width: 100%; /* 取消原本的 max-width 限制，让 flex center 生效 */
+  flex-direction: row; /* 强制水平排列 */
+}
+
+@media (max-width: 768px) {
+  .action-buttons {
+    flex-direction: column; /* 在移动端小屏幕上可以保持垂直堆叠 */
+    max-width: 320px; /* 恢复宽度限制 */
+    margin: 3vh auto 0 auto; /* 使用 auto 居中整个容器 */
+  }
 }
 
 .big-action-btn {
@@ -673,7 +654,7 @@ html.dark .parallax-overlay {
 
 .carousel-section {
   position: relative;
-  z-index: 3; /* 确保走马灯可点击且不被飞散效果覆盖 */
+  z-index: 3;
   width: 100%;
   max-width: 1800px;
   margin: 0 auto 30px auto;

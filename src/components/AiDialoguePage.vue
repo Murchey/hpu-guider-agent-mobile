@@ -480,6 +480,8 @@ const clearChat = () => {
   }).catch(() => {})
 }
 
+let currentAbortController: AbortController | null = null
+
 const sendMessage = async (text: string, showUserMessage: boolean) => {
   if (!text || isLoading.value) return
 
@@ -490,6 +492,13 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
     ElMessage.warning('请先在设置中配置 API Key')
     return
   }
+
+  // 中断之前可能仍在进行的请求
+  if (currentAbortController) {
+    currentAbortController.abort()
+  }
+  currentAbortController = new AbortController()
+  const signal = currentAbortController.signal
 
   // 如果是隐藏发送（如画像），则不将其直接推入对话列表，但需要包含在请求中
   const currentMessages = [...messages.value]
@@ -561,7 +570,8 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
             content_type: 'object_string'
           }],
           stream: true
-        })
+        }),
+        signal
       })
 
       if (!response.ok) {
@@ -650,7 +660,8 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
           model: model,
           messages: finalMessages,
           stream: true
-        })
+        }),
+        signal
       })
 
       if (!response.ok) {
@@ -737,10 +748,16 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
     }
     
   } catch (error: any) {
-    let errorMsg = error.message
+    let errorMsg = error?.message || String(error)
+    if (errorMsg === 'Failed to fetch' || error?.name === 'TypeError') {
+      errorMsg = '网络连接中断，请检查网络设置或尝试重新发送。'
+    }
     messages.value[assistantMsgIndex].content = `❌ 请求失败：${errorMsg}\n\n请检查设置或网络。`
   } finally {
     isLoading.value = false
+    if (currentAbortController) {
+      currentAbortController = null
+    }
     await scrollToBottom()
   }
 }
@@ -749,7 +766,9 @@ const handleSend = async () => {
   const text = inputText.value.trim()
   if (!text || isLoading.value) return
   inputText.value = ''
-  const prefix = modeOptionsBtnGroup.value
+  
+  const enableModePrefix = localStorage.getItem('enable-mode-prefix') !== 'false' // 默认开启
+  const prefix = enableModePrefix ? modeOptionsBtnGroup.value : ''
   const prefixedText = prefix && !text.startsWith(`${prefix}\n`) ? `${prefix}\n${text}` : text
   await sendMessage(prefixedText, true)
 }
