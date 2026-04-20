@@ -30,7 +30,7 @@
         <!-- 操作按钮 -->
         <div class="action-buttons">
           <el-button type="primary" size="large" round @click="dialogFormVisible = true" class="big-action-btn">
-            让智能体更懂你
+            让AI懂你喜好
           </el-button>
           <el-button type="success" size="large" round @click="handleSocialPublish" class="big-action-btn">
             分享旅游经历
