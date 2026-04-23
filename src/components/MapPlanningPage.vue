@@ -87,7 +87,7 @@
               <div v-if="index < itineraryList.length - 1" class="travel-time">
                 <el-divider border-style="dashed">
                   <div class="travel-info">
-                    <el-dropdown trigger="click" @command="(mode) => handleModeChange(index, mode)">
+                    <el-dropdown trigger="click" @command="(mode: string) => handleModeChange(index, mode)">
                       <div class="mode-display">
                         <el-icon v-if="element.travel_mode === 'walking'"><Guide /></el-icon>
                         <el-icon v-else-if="element.travel_mode === 'transit'"><Promotion /></el-icon>
@@ -385,7 +385,7 @@ const initMap = async () => {
   try {
     // 设置安全密钥
     if (securityCode && securityCode.trim() !== '') {
-      window._AMapSecurityConfig = {
+      (window as any)._AMapSecurityConfig = {
         securityJsCode: securityCode,
       }
     } else {
@@ -393,7 +393,7 @@ const initMap = async () => {
       // 在本地开发或无后端代理时，暂时删除此项。但是如果报错 USERKEY_PLAT_NOMATCH
       // 说明您申请的 Web端(JS API) Key 是需要配合 SecurityCode 或者代理的。
       // 作为备用方案，为了让纯 Web 服务 API Key 在地图 JS API 里也能“勉强”使用（不推荐，易失效），我们尝试强制清空安全配置：
-      window._AMapSecurityConfig = {
+      (window as any)._AMapSecurityConfig = {
         securityJsCode: '',
       }
     }
