@@ -94,9 +94,9 @@
             @click="drawer = true"
           >
             <el-icon><Memo /></el-icon>
-            <span class="toolbar-text">对话历史</span>
+            对话历史
           </el-button>
-          <span class="toolbar-text">工作模式：</span>
+          <span>工作模式：</span>
             <div class="mode-change-btn">
               <el-segmented v-model="modeValue" :options="modeOptions" />
             </div>
@@ -115,7 +115,7 @@
               size="small"
             >
               <el-icon><Picture /></el-icon>
-              <span class="toolbar-text">上传图片</span>
+              上传图片
             </el-button>
           </el-upload>
           <el-button
@@ -124,8 +124,7 @@
             :disabled="messages.length === 0 || isLoading"
             @click="clearChat"
           >
-            <el-icon><DeleteIcon /></el-icon>
-            <span class="toolbar-text">清空聊天</span>
+            清空聊天
           </el-button>
         </div>
         <div v-if="uploadedImageUrl" class="image-preview-container">
@@ -1274,14 +1273,6 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
     font-size: 12px;
     gap: 8px;
   }
-
-  .toolbar-text {
-    display: none;
-  }
-
-  .chat-toolbar .el-button {
-    padding: 8px;
-  }
   
   .mode-change-btn :deep(.el-segmented) {
     --el-segmented-item-selected-color: var(--el-color-primary);
@@ -1300,30 +1291,6 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   .scene-btn {
     font-size: 14px;
     padding: 15px 0;
-  }
-  
-  .message-avatar {
-    display: none;
-  }
-
-  .message-item {
-    justify-content: center;
-  }
-
-  .message-item.user {
-    flex-direction: row;
-  }
-
-  .message-content {
-    max-width: 95%;
-  }
-
-  .message-role {
-    text-align: center;
-  }
-
-  .message-item.user .message-tools {
-    justify-content: center;
   }
 }
 
@@ -1396,7 +1363,6 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  flex-wrap: wrap;
   gap: 12px;
   margin-bottom: 8px;
 }
@@ -1469,7 +1435,7 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 .history-item-actions {
   display: flex;
   gap: 4px;
-  opacity: 1; /* 改为一直显示 */
+  opacity: 0;
   transition: opacity 0.3s;
 }
 
