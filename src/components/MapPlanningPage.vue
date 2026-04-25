@@ -8,34 +8,31 @@
             <div v-for="(item, index) in itineraryList" :key="item.id" class="compact-item-wrapper">
               <div class="compact-item" :class="{ 'is-departure': item.type === 'departure' }">
                 <span class="compact-name">
-                  <el-icon v-if="item.type === 'departure'" class="departure-icon"><LocationFilled /></el-icon>
+                  <var-icon v-if="item.type === 'departure'" name="map-marker" class="departure-icon" />
                   {{ index + 1 }}. {{ item.name }}
                 </span>
                 <div class="compact-controls">
-                  <el-button 
-                    link
+                  <var-button 
+                    text
                     size="small" 
-                    :icon="CaretTop" 
                     :disabled="index === 0 || (index === 1 && itineraryList[0].type === 'departure')"
-                    @click="moveUp(index)"
-                  />
-                  <el-button 
-                    link
+                    @click.stop="moveUp(index)"
+                  >
+                    <var-icon name="chevron-up" />
+                  </var-button>
+                  <var-button 
+                    text
                     size="small" 
-                    :icon="CaretBottom" 
                     :disabled="index === itineraryList.length - 1 || item.type === 'departure'"
-                    @click="moveDown(index)"
-                  />
+                    @click.stop="moveDown(index)"
+                  >
+                    <var-icon name="chevron-down" />
+                  </var-button>
                 </div>
               </div>
               <!-- 添加紧凑列表中的出行描述 -->
               <div v-if="index < itineraryList.length - 1 && (travelTimes[index] || segmentDetails[index])" class="compact-travel-info">
-                <el-icon class="mode-icon">
-                  <Van v-if="item.travel_mode === 'driving' || !item.travel_mode" />
-                  <Guide v-else-if="item.travel_mode === 'walking'" />
-                  <Promotion v-else-if="item.travel_mode === 'transit'" />
-                  <Bicycle v-else-if="item.travel_mode === 'cycling'" />
-                </el-icon>
+                <var-icon class="mode-icon" :name="getIconName(item.travel_mode)" />
                 <span class="text">{{ getTravelTime(index) }}</span>
                 <span v-if="segmentDetails[index]" class="details">({{ segmentDetails[index] }})</span>
               </div>
@@ -55,68 +52,65 @@
           <template #item="{ element, index }">
             <div class="itinerary-item" :class="{ 'is-departure': element.type === 'departure' }">
               <div class="item-index" :class="{ 'departure-index': element.type === 'departure' }">
-                <el-icon v-if="element.type === 'departure'"><LocationFilled /></el-icon>
+                <var-icon v-if="element.type === 'departure'" name="map-marker" />
                 <span v-else>{{ index + 1 }}</span>
               </div>
               <div class="item-content">
                 <div class="item-header">
                   <div class="item-name">
-                    <el-tag v-if="element.type === 'departure'" size="small" type="danger" effect="dark" class="departure-tag">起点</el-tag>
+                    <var-chip v-if="element.type === 'departure'" size="small" type="danger" class="departure-tag">起点</var-chip>
                     {{ element.name }}
                   </div>
                   <div class="item-move-controls">
-                    <el-button 
-                      circle 
+                    <var-button 
+                      round 
                       size="small" 
-                      :icon="CaretTop" 
                       :disabled="index === 0 || (index === 1 && itineraryList[0].type === 'departure')"
                       @click.stop="moveUp(index)"
-                    />
-                    <el-button 
-                      circle 
+                    >
+                      <var-icon name="chevron-up" />
+                    </var-button>
+                    <var-button 
+                      round 
                       size="small" 
-                      :icon="CaretBottom" 
                       :disabled="index === itineraryList.length - 1 || element.type === 'departure'"
                       @click.stop="moveDown(index)"
-                    />
+                    >
+                      <var-icon name="chevron-down" />
+                    </var-button>
                   </div>
                 </div>
                 <div class="item-desc">{{ element.description }}</div>
                 <div v-if="element.type !== 'departure'" class="item-duration">建议停留: {{ element.suggested_duration }}分钟</div>
               </div>
               <div v-if="index < itineraryList.length - 1" class="travel-time">
-                <el-divider border-style="dashed">
+                <var-divider dashed>
                   <div class="travel-info">
-                    <el-dropdown trigger="click" @command="(mode: string) => handleModeChange(index, mode)">
+                    <var-menu>
                       <div class="mode-display">
-                        <el-icon v-if="element.travel_mode === 'walking'"><Guide /></el-icon>
-                        <el-icon v-else-if="element.travel_mode === 'transit'"><Promotion /></el-icon>
-                        <el-icon v-else-if="element.travel_mode === 'cycling'"><Bicycle /></el-icon>
-                        <el-icon v-else><Van /></el-icon>
+                        <var-icon :name="getIconName(element.travel_mode)" />
                         <div class="mode-text">
                           <span class="time">{{ getTravelTime(index) }}</span>
                           <span v-if="segmentDetails[index]" class="details">{{ segmentDetails[index] }}</span>
                         </div>
                       </div>
-                      <template #dropdown>
-                        <el-dropdown-menu>
-                          <el-dropdown-item command="driving">驾车</el-dropdown-item>
-                          <el-dropdown-item command="transit">公交</el-dropdown-item>
-                          <el-dropdown-item command="walking">步行</el-dropdown-item>
-                          <el-dropdown-item command="cycling">骑行</el-dropdown-item>
-                        </el-dropdown-menu>
+                      <template #menu>
+                        <var-cell ripple @click="handleModeChange(index, 'driving')">驾车</var-cell>
+                        <var-cell ripple @click="handleModeChange(index, 'transit')">公交</var-cell>
+                        <var-cell ripple @click="handleModeChange(index, 'walking')">步行</var-cell>
+                        <var-cell ripple @click="handleModeChange(index, 'cycling')">骑行</var-cell>
                       </template>
-                    </el-dropdown>
+                    </var-menu>
                   </div>
-                </el-divider>
+                </var-divider>
               </div>
             </div>
           </template>
         </VueDraggable>
 
         <div class="sidebar-footer" v-if="itineraryList.length > 0">
-          <el-button type="primary" class="confirm-btn" @click="handleConfirm">发送并确认行程</el-button>
-          <el-button type="success" class="confirm-btn open-map-btn" @click="openAmap" style="margin-top: 10px; margin-left: 0;">打开手机高德地图</el-button>
+          <var-button type="primary" block class="confirm-btn" @click="handleConfirm">发送并确认行程</var-button>
+          <var-button type="success" block class="confirm-btn open-map-btn" @click="openAmap" style="margin-top: 10px; margin-left: 0;">打开手机高德地图</var-button>
         </div>
       </div>
       
@@ -125,7 +119,7 @@
         v-if="isMobile"
         class="resizer" 
         @touchstart="startResize" 
-        @touchmove="resize" 
+        @touchmove.prevent="resize" 
         @touchend="stopResize"
       >
         <div class="resizer-handle"></div>
@@ -136,13 +130,7 @@
         <div class="map-legend" v-if="itineraryList.length > 0">
           <div class="legend-item" v-for="(color, mode) in modeColors" :key="mode">
             <span class="legend-line" :style="{ backgroundColor: color }"></span>
-            <el-icon class="legend-icon">
-              <Van v-if="mode === 'driving'" />
-              <Guide v-else-if="mode === 'walking'" />
-              <Promotion v-else-if="mode === 'transit'" />
-              <Bicycle v-else-if="mode === 'cycling'" />
-              <LocationFilled v-else-if="mode === 'railway'" />
-            </el-icon>
+            <var-icon class="legend-icon" :name="getIconName(mode)" />
             <span class="legend-text">
               {{ mode === 'driving' ? '驾车' : mode === 'walking' ? '步行' : mode === 'transit' ? '公交' : mode === 'cycling' ? '骑行' : '火车' }}
             </span>
@@ -156,11 +144,10 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed, shallowRef, nextTick } from 'vue'
 import { VueDraggable } from 'vue-draggable-plus'
-import { Van, CaretTop, CaretBottom, LocationFilled, Bicycle, Guide, Bicycle as CyclingIcon, Promotion } from '@element-plus/icons-vue'
 import AMapLoader from '@amap/amap-jsapi-loader'
 import axios from 'axios'
 import { useChatStore } from '../stores/chatStore'
-import { ElMessage } from 'element-plus'
+import { Snackbar } from '@varlet/ui'
 
 const props = defineProps<{
   activeTab?: string
@@ -199,14 +186,16 @@ const layoutStyle = computed(() => {
 
 const startResize = (e: TouchEvent) => {
   isResizing = true
-  startY = e.touches[0].clientY
+  if (e.touches && e.touches.length > 0) {
+    startY = e.touches[0].clientY
+  }
   if (pageRef.value) {
     startHeight = pageRef.value.clientHeight * (sidebarHeightRatio.value / 100)
   }
 }
 
 const resize = (e: TouchEvent) => {
-  if (!isResizing || !pageRef.value) return
+  if (!isResizing || !pageRef.value || !e.touches || e.touches.length === 0) return
   // 阻止默认滚动
   e.preventDefault()
   
@@ -247,6 +236,14 @@ const AMapInstance = shallowRef<any>(null)
 const map = shallowRef<any>(null)
 const calculators = shallowRef<Record<string, any>>({})
 const geocoder = shallowRef<any>(null)
+
+const getIconName = (mode: string) => {
+  if (mode === 'walking') return 'shoe-print'
+  if (mode === 'transit') return 'bus'
+  if (mode === 'cycling') return 'bike'
+  if (mode === 'railway') return 'train'
+  return 'car'
+}
 
 /**
  * 获取两个坐标点之间的弧形路径（模拟高铁/航线）
@@ -378,7 +375,7 @@ const initMap = async () => {
   const securityCode = import.meta.env.VITE_AMAP_SECURITY_CODE || '041b801bef278fb69682240d62c53a1d'
 
   if (!amapKey || amapKey === '在此处填写您的KEY' || amapKey.trim() === '') {
-    ElMessage.warning('检测到高德地图 Key 未配置，请在根目录 .env 文件中配置真实的 Key 以启用地图功能。')
+    Snackbar.warning('检测到高德地图 Key 未配置，请在根目录 .env 文件中配置真实的 Key 以启用地图功能。')
     return
   }
 
@@ -499,7 +496,7 @@ const initMap = async () => {
     }
   } catch (e) {
     console.error('地图加载或初始化过程中捕获到异常:', e)
-    ElMessage.error('地图初始化失败，请检查网络或 Key 配置')
+    Snackbar.error('地图初始化失败，请检查网络或 Key 配置')
   }
 }
 
@@ -815,9 +812,9 @@ const drawSegments = async () => {
             try {
               const route = result.routes?.[0] || result.rides?.[0]
               let path: any[] = []
-              if (route.path?.length > 0) path = route.path
-              else if (route.steps) route.steps.forEach((s: any) => s.path && path.push(...s.path))
-              else if (route.rides) route.rides.forEach((r: any) => r.path && path.push(...r.path))
+              if (route?.path?.length > 0) path = route.path
+              else if (route?.steps) route.steps.forEach((s: any) => s.path && path.push(...s.path))
+              else if (route?.rides) route.rides.forEach((r: any) => r.path && path.push(...r.path))
 
               if (path.length > 0) {
                 const lngLats = path.map(p => new AMapInstance.value.LngLat(p.lng || p[0], p.lat || p[1]))
@@ -878,7 +875,7 @@ const handleDragEnd = () => {
 
 const handleConfirm = () => {
   if (itineraryList.value.length === 0) {
-    ElMessage.warning('当前没有可确认的行程')
+    Snackbar.warning('当前没有可确认的行程')
     return
   }
 
@@ -902,7 +899,7 @@ const handleConfirm = () => {
   // 将消息存入 localStorage 供对话页读取并发送
   localStorage.setItem('pending-map-confirm', message)
 
-  ElMessage.success('行程已确认，正在同步至 AI 对话...')
+  Snackbar.success('行程已确认，正在同步至 AI 对话...')
 
   // 跳转回对话页
   emit('navigate', 'aiDialogue')
@@ -910,7 +907,7 @@ const handleConfirm = () => {
 
 const openAmap = () => {
   if (itineraryList.value.length < 2) {
-    ElMessage.warning('至少需要一个起点和一个终点')
+    Snackbar.warning('至少需要一个起点和一个终点')
     return
   }
 
@@ -997,6 +994,45 @@ onUnmounted(() => {
 .map-planning-page {
   height: 100%;
   width: 100%;
+  --map-bg: #ffffff;
+  --map-sidebar-bg: #ffffff;
+  --map-border: #e4e7ed;
+  --map-border-light: #ebeef5;
+  --map-text-primary: #303133;
+  --map-text-secondary: #606266;
+  --map-text-placeholder: #a8abb2;
+  --map-primary: #409eff;
+  --map-primary-light-9: #ecf5ff;
+  --map-primary-light-7: #d9ecff;
+  --map-primary-light-5: #b3d8ff;
+  --map-danger: #f56c6c;
+  --map-danger-light-9: #fef0f0;
+  --map-info: #909399;
+  --map-fill-light: #f5f7fa;
+  --map-fill: #f0f2f5;
+  --map-page-bg: #f2f3f5;
+  --map-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+html.dark .map-planning-page {
+  --map-bg: #1d1e1f;
+  --map-sidebar-bg: #1d1e1f;
+  --map-border: #4c4d4f;
+  --map-border-light: #363637;
+  --map-text-primary: #e5eaf3;
+  --map-text-secondary: #a3a6ad;
+  --map-text-placeholder: #8d9095;
+  --map-primary: #409eff;
+  --map-primary-light-9: #18222c;
+  --map-primary-light-7: #1d2b3a;
+  --map-primary-light-5: #263d53;
+  --map-danger: #f56c6c;
+  --map-danger-light-9: #2b1d1d;
+  --map-info: #6c6e72;
+  --map-fill-light: #262727;
+  --map-fill: #303030;
+  --map-page-bg: #141414;
+  --map-card-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .map-layout {
@@ -1007,8 +1043,8 @@ onUnmounted(() => {
 
 .sidebar {
   width: 350px;
-  background: var(--el-bg-color);
-  border-right: 1px solid var(--el-border-color-light);
+  background: var(--map-sidebar-bg);
+  border-right: 1px solid var(--map-border-light);
   display: flex;
   flex-direction: column;
   padding: 16px;
@@ -1018,15 +1054,15 @@ onUnmounted(() => {
 .sidebar-header h3 {
   margin-top: 0;
   margin-bottom: 8px;
-  color: var(--el-text-color-primary);
+  color: var(--map-text-primary);
 }
 
 .compact-itinerary {
   margin-bottom: 12px;
   padding: 8px;
-  background: var(--el-color-primary-light-9);
+  background: var(--map-primary-light-9);
   border-radius: 4px;
-  border-left: 3px solid var(--el-color-primary);
+  border-left: 3px solid var(--map-primary);
   max-height: 200px;
   overflow-y: auto;
 }
@@ -1043,10 +1079,10 @@ onUnmounted(() => {
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--el-text-color-secondary);
+  color: var(--map-text-secondary);
   padding-left: 20px;
   margin-bottom: 4px;
-  border-left: 1px dashed var(--el-color-primary-light-5);
+  border-left: 1px dashed var(--map-primary-light-5);
   margin-left: 10px;
 }
 
@@ -1060,11 +1096,11 @@ onUnmounted(() => {
 }
 
 .compact-item.is-departure {
-  color: var(--el-color-danger);
+  color: var(--map-danger);
 }
 
 .compact-item.is-departure .compact-name {
-  color: var(--el-color-danger);
+  color: var(--map-danger);
   font-weight: bold;
 }
 
@@ -1079,7 +1115,7 @@ onUnmounted(() => {
 
 .compact-name {
   font-size: 14px;
-  color: var(--el-color-primary);
+  color: var(--map-primary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1094,7 +1130,7 @@ onUnmounted(() => {
 }
 
 .empty-tip {
-  color: var(--el-text-color-secondary);
+  color: var(--map-text-secondary);
   font-size: 15px;
 }
 
@@ -1103,7 +1139,7 @@ onUnmounted(() => {
 }
 
 .itinerary-item {
-  background: var(--el-fill-color-light);
+  background: var(--map-fill-light);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 28px;
@@ -1114,18 +1150,18 @@ onUnmounted(() => {
 }
 
 .itinerary-item:hover {
-  border-color: var(--el-color-primary);
-  background: var(--el-fill-color);
+  border-color: var(--map-primary);
+  background: var(--map-fill);
 }
 
 .itinerary-item.is-departure {
-  border-left: 4px solid var(--el-color-danger);
-  background: var(--el-color-danger-light-9);
+  border-left: 4px solid var(--map-danger);
+  background: var(--map-danger-light-9);
   cursor: default;
 }
 
 .item-index.departure-index {
-  background: var(--el-color-danger);
+  background: var(--map-danger);
 }
 
 .departure-tag {
@@ -1139,7 +1175,7 @@ onUnmounted(() => {
   top: -12px;
   width: 28px;
   height: 28px;
-  background: var(--el-color-primary);
+  background: var(--map-primary);
   color: white;
   border-radius: 50%;
   display: flex;
@@ -1163,6 +1199,7 @@ onUnmounted(() => {
   font-size: 16px;
   flex: 1;
   line-height: 1.4;
+  color: var(--map-text-primary);
 }
 
 .item-move-controls {
@@ -1173,14 +1210,14 @@ onUnmounted(() => {
 
 .item-desc {
   font-size: 14px;
-  color: var(--el-text-color-secondary);
+  color: var(--map-text-secondary);
   margin-bottom: 8px;
   line-height: 1.6;
 }
 
 .item-duration {
   font-size: 13px;
-  color: var(--el-color-info);
+  color: var(--map-info);
   line-height: 1.4;
 }
 
@@ -1196,18 +1233,18 @@ onUnmounted(() => {
   align-items: center;
   gap: 4px;
   font-size: 11px;
-  color: var(--el-color-primary);
+  color: var(--map-primary);
   padding: 0 8px;
-  background: var(--el-bg-color);
+  background: var(--map-bg);
   border-radius: 12px;
-  border: 1px solid var(--el-color-primary-light-7);
+  border: 1px solid var(--map-primary-light-7);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .travel-info:hover {
-  background: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  background: var(--map-primary-light-9);
+  border-color: var(--map-primary);
 }
 
 .mode-display {
@@ -1229,18 +1266,18 @@ onUnmounted(() => {
 
 .mode-text .details {
   font-size: 10px;
-  color: var(--el-text-color-secondary);
+  color: var(--map-text-secondary);
   white-space: normal; /* 允许换行以显示更全的火车信息 */
   word-break: break-all;
   max-width: 260px; /* 增加宽度限制 */
   margin-top: 2px;
 }
 
-.mode-display .el-icon {
+.mode-display .var-icon {
   font-size: 14px;
 }
 
-.travel-time :deep(.el-divider--horizontal) {
+.travel-time :deep(.var-divider--horizontal) {
   margin: 0;
 }
 
@@ -1259,15 +1296,15 @@ onUnmounted(() => {
   position: absolute;
   bottom: 24px;
   right: 24px;
-  background: var(--el-bg-color);
+  background: var(--map-bg);
   padding: 12px 16px;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--map-card-shadow);
   z-index: 1000;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  border: 1px solid var(--el-border-color-light);
+  border: 1px solid var(--map-border-light);
 }
 
 .legend-item {
@@ -1275,7 +1312,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: var(--el-text-color-primary);
+  color: var(--map-text-primary);
 }
 
 .legend-line {
@@ -1286,20 +1323,16 @@ onUnmounted(() => {
 
 .legend-icon {
   font-size: 16px;
-  color: var(--el-text-color-secondary);
+  color: var(--map-text-secondary);
 }
 
 .legend-text {
   font-weight: 500;
 }
 
-html.dark .map-legend {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
 .sidebar-footer {
   padding-top: 16px;
-  border-top: 1px solid var(--el-border-color-lighter);
+  border-top: 1px solid var(--map-border-light);
 }
 
 .confirm-btn {
@@ -1314,7 +1347,7 @@ html.dark .map-legend {
 
 :deep(.marker-label) {
   padding: 4px 8px;
-  background-color: var(--el-color-primary);
+  background-color: var(--map-primary);
   color: white;
   border-radius: 4px;
   font-size: 12px;
@@ -1324,7 +1357,7 @@ html.dark .map-legend {
 }
 
 :deep(.marker-label.is-departure) {
-  background-color: var(--el-color-danger);
+  background-color: var(--map-danger);
 }
 
 html.dark :deep(.marker-label) {
@@ -1342,6 +1375,7 @@ html.dark :deep(.marker-label) {
     border-right: none;
     border-top: none;
     padding: 10px;
+    padding-bottom: calc(75px + env(safe-area-inset-bottom));
     box-sizing: border-box;
     /* 缩小紧凑栏目的宽度，并增加内边距避免超出 */
   }
@@ -1349,7 +1383,7 @@ html.dark :deep(.marker-label) {
   .resizer {
     width: 100%;
     height: 16px;
-    background: var(--el-bg-color-page);
+    background: var(--map-page-bg);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -1362,7 +1396,7 @@ html.dark :deep(.marker-label) {
   .resizer-handle {
     width: 40px;
     height: 4px;
-    background-color: var(--el-text-color-placeholder);
+    background-color: var(--map-text-placeholder);
     border-radius: 2px;
   }
   

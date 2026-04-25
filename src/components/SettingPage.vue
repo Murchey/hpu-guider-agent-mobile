@@ -1,154 +1,184 @@
 <template>
   <div class="setting-page">
-    <el-card class="settings-card shadow-sm">
-      <template #header>
-        <div class="card-header">
-          <el-icon><Setting /></el-icon>
+    <var-card class="settings-card shadow-sm">
+      <template #title>
+        <div class="card-header" style="padding: 15px; border-bottom: 1px solid var(--color-outline);">
+          <var-icon name="cog" />
           <span>API 核心配置</span>
         </div>
       </template>
-      <div class="tips">
-        <div class="api-item">
-          <span class="label">服务商 (Provider)</span>
-          <span class="value">{{ MANUAL_API_SETTINGS.provider }}</span>
+      <template #description>
+        <div class="tips" style="padding: 15px;">
+          <div class="api-item">
+            <span class="label">服务商 (Provider)</span>
+            <span class="value">{{ MANUAL_API_SETTINGS.provider }}</span>
+          </div>
+          <div class="api-item">
+            <span class="label">机器人 ID (Bot ID)</span>
+            <span class="value">{{ MANUAL_API_SETTINGS.botId }}</span>
+          </div>
+          <div class="api-item">
+            <span class="label">接口地址 (Base URL)</span>
+            <span class="value">{{ MANUAL_API_SETTINGS.baseURL }}</span>
+          </div>
+          <div class="api-item save-action">
+            <var-button type="primary" class="save-btn" @click="applyCozeSettings">
+              应用 Coze 核心配置
+            </var-button>
+          </div>
         </div>
-        <div class="api-item">
-          <span class="label">机器人 ID (Bot ID)</span>
-          <span class="value">{{ MANUAL_API_SETTINGS.botId }}</span>
-        </div>
-        <div class="api-item">
-          <span class="label">接口地址 (Base URL)</span>
-          <span class="value">{{ MANUAL_API_SETTINGS.baseURL }}</span>
-        </div>
-        <div class="api-item save-action">
-          <el-button type="primary" class="save-btn" @click="applyCozeSettings">
-            应用 Coze 核心配置
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+      </template>
+    </var-card>
 
     <div class="action-buttons">
-      <el-button 
+      <var-button 
         type="primary" 
-        plain 
+        outline 
         class="switch-btn"
         @click="showCustomSettings = !showCustomSettings"
       >
-        <el-icon><Refresh /></el-icon>
+        <var-icon name="refresh" />
         {{ showCustomSettings ? '隐藏自定义 API 配置' : '显示自定义 API 配置' }}
-      </el-button>
+      </var-button>
     </div>
 
-    <el-card v-if="showCustomSettings" class="settings-card shadow-sm custom-api-card">
-      <template #header>
-        <div class="card-header">
-          <el-icon><Edit /></el-icon>
+    <var-card v-if="showCustomSettings" class="settings-card shadow-sm custom-api-card">
+      <template #title>
+        <div class="card-header" style="padding: 15px; border-bottom: 1px solid var(--color-outline);">
+          <var-icon name="pencil" />
           <span>自定义 API 配置</span>
         </div>
       </template>
-      <div class="tips">
-        <div class="api-item">
-          <span class="label">服务商 (Provider)</span>
-          <el-input v-model="CUSTOM_API_SETTINGS.provider" placeholder="例如: openai, custom" />
+      <template #description>
+        <div class="tips" style="padding: 15px;">
+          <div class="api-item">
+            <span class="label">服务商 (Provider)</span>
+            <var-input v-model="CUSTOM_API_SETTINGS.provider" placeholder="例如: openai, custom" />
+          </div>
+          <div class="api-item">
+            <span class="label">接口地址 (Base URL)</span>
+            <var-input v-model="CUSTOM_API_SETTINGS.baseURL" placeholder="接口根地址" />
+          </div>
+          <div class="api-item">
+            <span class="label">模型 (Model)</span>
+            <var-input v-model="CUSTOM_API_SETTINGS.model" placeholder="例如: gpt-3.5-turbo" />
+          </div>
+          <div class="api-item">
+            <span class="label">图片处理模式 (Image Mode)</span>
+            <var-select v-model="CUSTOM_API_SETTINGS.imageMode" placeholder="请选择图片处理方式">
+              <var-option label="Base64 模式 (适配硅基流动/OpenAI)" value="base64" />
+              <var-option label="Coze 文件上传模式 (需上传接口)" value="coze" />
+            </var-select>
+          </div>
+          <div class="api-item">
+            <span class="label">API Key</span>
+            <var-input v-model="CUSTOM_API_SETTINGS.apiKey" type="password" placeholder="输入您的 API Key" />
+          </div>
+          <div class="api-item save-action">
+            <var-button type="success" class="save-btn" @click="saveCustomSettings">
+              保存并应用自定义配置
+            </var-button>
+          </div>
         </div>
-        <div class="api-item">
-          <span class="label">接口地址 (Base URL)</span>
-          <el-input v-model="CUSTOM_API_SETTINGS.baseURL" placeholder="接口根地址" />
-        </div>
-        <div class="api-item">
-          <span class="label">模型 (Model)</span>
-          <el-input v-model="CUSTOM_API_SETTINGS.model" placeholder="例如: gpt-3.5-turbo" />
-        </div>
-        <div class="api-item">
-          <span class="label">图片处理模式 (Image Mode)</span>
-          <el-select v-model="CUSTOM_API_SETTINGS.imageMode" placeholder="请选择图片处理方式" style="width: 100%">
-            <el-option label="Base64 模式 (适配硅基流动/OpenAI)" value="base64" />
-            <el-option label="Coze 文件上传模式 (需上传接口)" value="coze" />
-          </el-select>
-        </div>
-        <div class="api-item">
-          <span class="label">API Key</span>
-          <el-input v-model="CUSTOM_API_SETTINGS.apiKey" type="password" show-password placeholder="输入您的 API Key" />
-        </div>
-        <div class="api-item save-action">
-          <el-button type="success" class="save-btn" @click="saveCustomSettings">
-            保存并应用自定义配置
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+      </template>
+    </var-card>
 
     <!-- 合并后的：对话高级设置与模拟调试卡片 -->
-    <el-card class="settings-card shadow-sm prompt-card">
-      <template #header>
-        <div class="card-header">
-          <el-icon><ChatDotRound /></el-icon>
+    <!-- 主题与显示设置 -->
+    <var-card class="settings-card shadow-sm theme-card">
+      <template #title>
+        <div class="card-header" style="padding: 15px; border-bottom: 1px solid var(--color-outline);">
+          <var-icon name="palette" />
+          <span>主题与显示设置</span>
+        </div>
+      </template>
+      <template #description>
+        <div class="tips" style="padding: 15px;">
+          <div class="api-item" style="display: flex; align-items: center; justify-content: space-between;">
+            <span class="label">深色模式</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span class="theme-text" style="font-size: 14px; color: var(--color-text-secondary)">{{ themeStore.isDarkMode ? '已开启' : '已关闭' }}</span>
+              <var-switch
+                v-model="themeStore.isDarkMode"
+                @change="(val) => themeStore.applyTheme(Boolean(val))"
+              />
+            </div>
+          </div>
+          <p class="prompt-hint" style="text-align: left; margin-top: 4px;">调整应用界面的明暗主题模式。</p>
+        </div>
+      </template>
+    </var-card>
+
+    <var-card class="settings-card shadow-sm prompt-card">
+      <template #title>
+        <div class="card-header" style="padding: 15px; border-bottom: 1px solid var(--color-outline);">
+          <var-icon name="message-processing" />
           <span>对话高级设置与调试</span>
         </div>
       </template>
-      <div class="tips">
-        <div class="api-item">
-          <div style="display: flex; align-items: center; justify-content: space-between;">
-            <span class="label">发送前置工作模式提示</span>
-            <el-switch
-              v-model="enableModePrefix"
-              active-text="开启"
-              inactive-text="关闭"
-              @change="saveModePrefixSetting"
+      <template #description>
+        <div class="tips" style="padding: 15px;">
+          <div class="api-item">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span class="label">发送前置工作模式提示</span>
+              <var-switch
+                v-model="enableModePrefix"
+                @change="saveModePrefixSetting"
+              />
+            </div>
+            <p class="prompt-hint" style="text-align: left; margin-top: 4px;">开启后，每次发送消息会自动附加工作模式前置内容。</p>
+          </div>
+          
+          <var-divider dashed>系统提示词 (System Prompt)</var-divider>
+          
+          <div class="api-item">
+            <var-input
+              v-model="systemPrompt"
+              textarea
+              :rows="4"
+              placeholder="输入初始化提示词..."
             />
           </div>
-          <p class="prompt-hint" style="text-align: left; margin-top: 4px;">开启后，每次发送消息会自动附加工作模式前置内容。</p>
-        </div>
-        
-        <el-divider border-style="dashed">系统提示词 (System Prompt)</el-divider>
-        
-        <div class="api-item">
-          <el-input
-            v-model="systemPrompt"
-            type="textarea"
-            :rows="4"
-            placeholder="输入初始化提示词..."
-          />
-        </div>
-        <div class="api-item save-action">
-          <el-button type="warning" class="save-btn" @click="sendInitialPrompt">
-            <el-icon><Promotion /></el-icon>
-            发送初始化提示词到 AI
-          </el-button>
-        </div>
+          <div class="api-item save-action">
+            <var-button type="warning" class="save-btn" @click="sendInitialPrompt">
+              <var-icon name="send" />
+              发送初始化提示词到 AI
+            </var-button>
+          </div>
 
-        <el-divider border-style="dashed">AI 消息模拟 (测试专用)</el-divider>
-        
-        <p class="prompt-hint" style="text-align: left; margin-bottom: 12px;">用于测试前端对协议（如 [MAP_DATA], [SCENE_DATA]）的解析效果。</p>
-        <div class="api-item">
-          <el-input
-            v-model="simulatedAiContent"
-            type="textarea"
-            :rows="4"
-            placeholder="输入模拟回复内容，包含协议标签测试效果..."
-          />
+          <var-divider dashed>AI 消息模拟 (测试专用)</var-divider>
+          
+          <p class="prompt-hint" style="text-align: left; margin-bottom: 12px;">用于测试前端对协议（如 [MAP_DATA], [SCENE_DATA]）的解析效果。</p>
+          <div class="api-item">
+            <var-input
+              v-model="simulatedAiContent"
+              textarea
+              :rows="4"
+              placeholder="输入模拟回复内容，包含协议标签测试效果..."
+            />
+          </div>
+          <div class="api-item save-action">
+            <var-button type="info" class="save-btn" @click="sendSimulatedAiMessage">
+              <var-icon name="cog-outline" />
+              立即模拟 AI 回复并跳转
+            </var-button>
+          </div>
         </div>
-        <div class="api-item save-action">
-          <el-button type="info" class="save-btn" @click="sendSimulatedAiMessage">
-            <el-icon><Tools /></el-icon>
-            立即模拟 AI 回复并跳转
-          </el-button>
-        </div>
-      </div>
-    </el-card>
+      </template>
+    </var-card>
 
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, reactive } from 'vue'
-import { Setting, Refresh, Edit, ChatDotRound, Promotion, Tools } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
+import { Snackbar } from '@varlet/ui'
 import { useChatStore } from '../stores/chatStore'
+import { useThemeStore } from '../stores/themeStore'
 
 const emit = defineEmits(['navigate'])
 const chatStore = useChatStore()
+const themeStore = useThemeStore()
 const showCustomSettings = ref(false)
 const enableModePrefix = ref(true)
 
@@ -162,12 +192,12 @@ const sendSimulatedAiMessage = () => {
   
   if (typeof store.invokeSimulatedAiResponse !== 'function') {
     console.error('错误: invokeSimulatedAiResponse 未在 store 中定义。')
-    ElMessage.error('系统核心组件版本不一致，请按 Ctrl+F5 强制刷新浏览器缓存')
+    Snackbar.error('系统核心组件版本不一致，请按 Ctrl+F5 强制刷新浏览器缓存')
     return
   }
 
   if (!simulatedAiContent.value.trim()) {
-    ElMessage.warning('请输入要模拟的 AI 内容')
+    Snackbar.warning('请输入要模拟的 AI 内容')
     return
   }
   
@@ -175,7 +205,7 @@ const sendSimulatedAiMessage = () => {
   simulatedAiContent.value = ''
   
   emit('navigate', 'aiDialogue')
-  ElMessage.success('模拟成功')
+  Snackbar.success('模拟成功')
 }
 
 const saveModePrefixSetting = (val: boolean) => {
@@ -252,7 +282,7 @@ const systemPrompt = ref(`## 1. 角色定义
 
 const sendInitialPrompt = () => {
   if (!systemPrompt.value.trim()) {
-    ElMessage.warning('请输入提示词')
+    Snackbar.warning('请输入提示词')
     return
   }
   // 将提示词存入 localStorage 供对话页读取
@@ -263,7 +293,7 @@ const sendInitialPrompt = () => {
   localStorage.setItem('saved-system-prompt', systemPrompt.value)
   // 触发跳转
   emit('navigate', 'aiDialogue')
-  ElMessage.success('正在跳转并发送提示词...')
+  Snackbar.success('正在跳转并发送提示词...')
 }
 
 const MANUAL_API_SETTINGS = {
@@ -287,17 +317,17 @@ const CUSTOM_API_SETTINGS = reactive({
 
 const saveCustomSettings = () => {
   if (!CUSTOM_API_SETTINGS.apiKey) {
-    ElMessage.warning('请输入 API Key')
+    Snackbar.warning('请输入 API Key')
     return
   }
   localStorage.setItem('ai-chat-settings', JSON.stringify(CUSTOM_API_SETTINGS))
-  ElMessage.success('自定义配置已保存并应用')
+  Snackbar.success('自定义配置已保存并应用')
 }
 
 const applyCozeSettings = () => {
   localStorage.setItem('ai-chat-settings', JSON.stringify(MANUAL_API_SETTINGS))
   showCustomSettings.value = false
-  ElMessage.success('已应用 Coze 核心配置')
+  Snackbar.success('已应用 Coze 核心配置')
 }
 
 const applyManualApiSettings = () => {
@@ -346,14 +376,43 @@ onMounted(() => {
   justify-content: flex-start;
   align-items: center;
   box-sizing: border-box;
+  --setting-bg: #ffffff;
+  --setting-card-bg: #ffffff;
+  --setting-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  --setting-text-primary: #303133;
+  --setting-text-secondary: #606266;
+  --setting-text-regular: #606266;
+  --setting-fill-lighter: #f5f7fa;
+  --setting-success: #67c23a;
+  --setting-success-bg: #f0f9eb;
+  --setting-warning: #e6a23c;
+  --setting-warning-bg: #fdf6ec;
+  --setting-border: #e4e7ed;
+}
+
+html.dark .setting-page {
+  --setting-bg: #141414;
+  --setting-card-bg: #1d1e1f;
+  --setting-card-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --setting-text-primary: #e5eaf3;
+  --setting-text-secondary: #a3a6ad;
+  --setting-text-regular: #cfd3dc;
+  --setting-fill-lighter: #2a2b2d;
+  --setting-success: #67c23a;
+  --setting-success-bg: #1a2c20;
+  --setting-warning: #e6a23c;
+  --setting-warning-bg: #2c251a;
+  --setting-border: #333333;
 }
 
 .settings-card {
   width: 92%; /* 针对 375 宽度优化，留出两侧间隙 */
   max-width: 600px;
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--setting-card-shadow);
   margin-bottom: 20px;
+  background: var(--setting-card-bg);
+  border: 1px solid var(--setting-border);
 }
 
 @media (max-width: 768px) {
@@ -363,18 +422,18 @@ onMounted(() => {
 }
 
 .custom-api-card {
-  border-left: 4px solid var(--el-color-success);
-  background: var(--el-color-success-light-9);
+  border-left: 4px solid var(--setting-success);
+  background: var(--setting-success-bg);
 }
 
 .prompt-card {
-  border-left: 4px solid var(--el-color-warning);
-  background: var(--el-color-warning-light-9);
+  border-left: 4px solid var(--setting-warning);
+  background: var(--setting-warning-bg);
 }
 
 .prompt-hint {
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--setting-text-secondary);
   text-align: center;
   margin-top: 8px;
 }
@@ -411,7 +470,7 @@ onMounted(() => {
 .card-header {
   font-size: 16px;
   font-weight: 600;
-  color: var(--el-text-color-primary);
+  color: var(--setting-text-primary);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -421,7 +480,7 @@ onMounted(() => {
   margin: 0;
   line-height: 1.6;
   font-size: 14px;
-  color: var(--el-text-color-regular);
+  color: var(--setting-text-regular);
   word-break: break-all; /* 关键：防止长 URL 在 375 宽度下溢出 */
 }
 
@@ -435,7 +494,7 @@ onMounted(() => {
 
 .label {
   font-weight: 600;
-  color: var(--el-text-color-secondary);
+  color: var(--setting-text-secondary);
   display: block;
   margin-bottom: 2px;
   font-size: 12px;
@@ -444,27 +503,9 @@ onMounted(() => {
 .value {
   display: block;
   padding: 8px 10px;
-  background: var(--el-fill-color-lighter);
+  background: var(--setting-fill-lighter);
   border-radius: 6px;
   font-family: monospace;
-}
-
-html.dark .settings-card {
-  background: #1d1e1f;
-  border-color: #333;
-}
-
-html.dark .custom-api-card {
-  background: #1a2c20;
-  border-left-color: var(--el-color-success);
-}
-
-html.dark .prompt-card {
-  background: #2c251a;
-  border-left-color: var(--el-color-warning);
-}
-
-html.dark .value {
-  background: #2a2b2d;
+  color: var(--setting-text-primary);
 }
 </style>

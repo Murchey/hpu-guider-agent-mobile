@@ -1,13 +1,24 @@
 <template>
   <div class="ai-dialogue-page">
     <div class="chat-container">
+      <div class="chat-header">
+        <var-button
+          text
+          round
+          class="history-btn"
+          @click="drawer = true"
+        >
+          <var-icon name="menu" :size="24" />
+        </var-button>
+        <span class="header-title">文途智行</span>
+        <div class="header-spacer"></div>
+      </div>
       <div class="chat-messages" ref="messagesRef">
         <div v-if="messages.length === 0 && !isSettingsLoaded" class="empty-tip">
-          <el-empty :image="agentIcon" :image-size="200" description="加载设置中..." />
+          <var-result class="result-empty" :image="agentIcon" title="加载设置中..." />
         </div>
         <div v-else-if="messages.length === 0" class="empty-tip">
-          <el-empty :image="agentIcon" :image-size="200" :description="welcomeMessage">
-          </el-empty>
+          <var-result class="result-empty" :image="agentIcon" :title="welcomeMessage" />
         </div>
         
         <div
@@ -17,246 +28,277 @@
           :class="msg.role"
         >
           <div class="message-avatar">
-            <el-avatar :size="40" :icon="msg.role === 'user' ? User : ChatDotRound" />
+            <var-avatar :size="40" :src="msg.role === 'assistant' ? agentIcon : undefined">
+              <var-icon v-if="msg.role === 'user'" name="account-circle" />
+            </var-avatar>
           </div>
           <div class="message-content">
             <div class="message-role">
               {{ msg.role === 'user' ? '你' : '文途智行' }}
             </div>
             <div v-if="msg.imageUrl" class="message-image-wrapper">
-              <el-image 
+              <var-image 
                 :src="msg.imageUrl" 
                 class="message-image" 
                 fit="cover" 
-                :preview-src-list="[msg.imageUrl]"
+                ripple
               />
             </div>
-            <el-card class="message-card" :class="msg.role">
+            <div class="message-card" :class="msg.role">
               <div v-if="editingIndex === index" class="message-edit-area">
-                <el-input
+                <var-input
                   v-model="editingText"
-                  type="textarea"
-                  :autosize="{ minRows: 1, maxRows: 10 }"
+                  textarea
+                  :rows="1"
                   class="edit-input"
                 />
                 <div class="edit-actions">
-                  <el-button size="small" @click="cancelEdit">取消</el-button>
-                  <el-button size="small" type="primary" @click="submitEdit(index)">提交并重发</el-button>
+                  <var-button size="small" @click="cancelEdit">取消</var-button>
+                  <var-button size="small" type="primary" @click="submitEdit(index)">提交并重发</var-button>
                 </div>
               </div>
-              <div v-else class="message-text" v-html="msg.role === 'assistant' ? formatAssistantMessage(msg.content) : formatMessage(msg.content)"></div>
+              <div v-else class="message-text markdown-body" v-html="msg.role === 'assistant' ? formatAssistantMessage(msg.content) : formatMessage(msg.content)"></div>
               <div v-if="msg.role === 'assistant' && hasMapData(msg.content)" class="map-action-wrapper">
-                <el-button 
+                <var-button 
                   type="success" 
                   size="small" 
-                  round 
-                  :icon="Picture"
                   @click="goToMap(msg.content)"
                 >
+                  <var-icon name="map-marker" />
                   转到地图
-                </el-button>
+                </var-button>
               </div>
-            </el-card>
+            </div>
             <div v-if="editingIndex !== index" class="message-tools">
-              <el-tooltip content="复制" placement="bottom">
-                <el-button link :icon="CopyDocument" @click.stop="handleCopy(msg.content)" />
-              </el-tooltip>
-              <el-tooltip v-if="msg.role === 'user'" content="修改" placement="bottom">
-                <el-button link :icon="Edit" @click.stop="startEdit(index, msg.content)" />
-              </el-tooltip>
-              <el-tooltip content="删除" placement="bottom">
-                <el-button link :icon="DeleteIcon" @click.stop="handleDeleteMessage(index)" />
-              </el-tooltip>
+              <var-button text round @click.stop="handleCopy(msg.content)">
+                <var-icon name="content-copy" size="18"/>
+              </var-button>
+              <var-button v-if="msg.role === 'user'" text round @click.stop="startEdit(index, msg.content)">
+                <var-icon name="pencil" size="18"/>
+              </var-button>
+              <var-button text round @click.stop="handleDeleteMessage(index)">
+                <var-icon name="delete" size="18"/>
+              </var-button>
             </div>
           </div>
         </div>
         
         <div v-if="isLoading" class="message-item assistant">
           <div class="message-avatar">
-            <el-avatar :size="40" icon="ChatDotRound" />
+            <var-avatar :size="40" :src="agentIcon" />
           </div>
           <div class="message-content">
-            <el-card class="message-card loading-card">
-              <el-icon class="loading-icon"><Loading /></el-icon>
-              <span>文途智行正在思考中...</span>
-            </el-card>
+            <div class="message-card loading-card">
+              <var-loading type="circle" :size="20" color="var(--color-primary)" />
+              <span style="margin-left: 8px;">文途智行正在思考中...</span>
+            </div>
           </div>
         </div>
       </div>
       
-      <div class="chat-input">
-        <div class="chat-toolbar">
-          <el-button
-            class="chat-toolbar-history"
-            type="info"
-            plain
-            size="small"
-            @click="drawer = true"
-          >
-            <el-icon><Memo /></el-icon>
-            <span class="toolbar-text">对话历史</span>
-          </el-button>
-          <span class="toolbar-text">工作模式：</span>
-            <div class="mode-change-btn">
-              <el-segmented v-model="modeValue" :options="modeOptions" />
-            </div>
-          <el-upload
-            class="chat-toolbar-upload"
-            action="#"
-            :auto-upload="false"
-            :show-file-list="false"
-            accept="image/*"
-            :on-change="handleFileChange"
-            :disabled="isLoading"
-          >
-            <el-button
-              type="primary"
-              :disabled="isLoading"
-              size="small"
-            >
-              <el-icon><Picture /></el-icon>
-              <span class="toolbar-text">上传图片</span>
-            </el-button>
-          </el-upload>
-          <el-button
-            class="chat-toolbar-clear"
-            type="danger"
-            :disabled="messages.length === 0 || isLoading"
-            @click="clearChat"
-          >
-            <el-icon><DeleteIcon /></el-icon>
-            <span class="toolbar-text">清空聊天</span>
-          </el-button>
-        </div>
-        <div v-if="uploadedImageUrl" class="image-preview-container">
+      <div class="chat-input-container">
+        <!-- 图片预览区域 -->
+        <div v-if="uploadedImageUrl" class="image-preview-floating">
           <div class="image-preview-wrapper">
-            <el-image 
+            <var-image 
               :src="uploadedImageUrl" 
               class="image-preview" 
               fit="cover"
-              :preview-src-list="[uploadedImageUrl]"
+              ripple
             />
-            <el-icon class="remove-image-btn" @click="removeUploadedImage"><CircleClose /></el-icon>
+            <var-icon class="remove-image-btn" name="close-circle" @click="removeUploadedImage" />
           </div>
           <div v-if="isUploadingImage" class="upload-loading-overlay">
-            <el-icon class="is-loading"><Loading /></el-icon>
-            <span>上传中...</span>
+            <var-loading type="circle" :size="16" />
           </div>
         </div>
-        <div class="chat-input-row">
-          <div class="chat-textarea">
-            <el-input
-              v-model="inputText"
-              type="textarea"
-              placeholder="输入消息... (Enter 发送，Shift+Enter 换行)"
-              :autosize="{ minRows: 2, maxRows: 6 }"
+
+        <div class="gemini-input-pill">
+          <!-- 左侧：功能组合区（模式切换 + 上传） -->
+          <div class="left-action-group">
+            <!-- 模式切换 -->
+            <var-menu placement="top-start" :offset-y="12">
+              <var-button text round class="secondary-icon-btn mode-btn">
+                <var-icon name="wrench" :size="24" class="mode-icon" />
+              </var-button>
+              
+              <template #menu>
+                <div class="mode-popover">
+                  <div 
+                    v-for="opt in modeOptions" 
+                    :key="opt"
+                    class="mode-popover-item"
+                    :class="{ active: modeValue === opt }"
+                    @click="modeValue = opt"
+                  >
+                    {{ opt }}
+                  </div>
+                </div>
+              </template>
+            </var-menu>
+
+            <!-- 上传图片（作为前缀图标） -->
+            <var-uploader
+              v-model="fileList"
+              class="pill-uploader"
+              accept="image/*"
+              :maxlength="1"
               :disabled="isLoading"
+              @after-read="handleFileChange"
+              @remove="removeUploadedImage"
+              hide-list
+            >
+              <var-button text round class="secondary-icon-btn upload-btn">
+                <var-icon name="image-outline" :size="22" />
+              </var-button>
+            </var-uploader>
+            
+            <!-- 细分割线 -->
+            <div class="vertical-divider"></div>
+          </div>
+
+          <!-- 中间：输入区域 -->
+          <div class="input-area">
+            <var-input
+              v-model="inputText"
+              textarea
+              placeholder="输入文字、说话或分享照片..."
+              :disabled="isLoading"
+              :rows="1"
+              variant="standard"
+              class="pill-textarea"
+              :hint="false"
+              :line="false"
               @keydown.enter.exact.prevent="handleSend"
               @keydown.shift.enter.prevent="handleNewLine"
             />
           </div>
-          <div class="chat-actions">
-            <el-button 
-              type="primary" 
-              :loading="isLoading"
-              :disabled="!inputText.trim() || isLoading"
-              @click="handleSend"
-            >
-              发送
-            </el-button>
+
+          <!-- 右侧：核心动作区（动态发送/语音） -->
+          <div class="right-action-area">
+            <transition name="fade-scale" mode="out-in">
+              <var-button
+                v-if="!inputText.trim()"
+                key="mic"
+                text
+                round
+                class="secondary-icon-btn main-action"
+                @click="Snackbar.info('请先输入内容或上传图片')"
+              >
+                <var-icon name="send-outline" :size="24" class="send-idle-icon" />
+              </var-button>
+              <var-button
+                v-else
+                key="send"
+                round
+                class="send-pill-btn"
+                :loading="isLoading"
+                @click="handleSend"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="send-svg-icon">
+                  <path 
+                    d="M21 3L3 11.5L8.5 12.5L9.5 18L21 3Z" 
+                    stroke="white" 
+                    stroke-width="2" 
+                    stroke-linecap="round" 
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </var-button>
+            </transition>
           </div>
         </div>
       </div>
     </div>
+    
     <!-- 单选卡 -->
-    <el-dialog
-      v-model="sceneDialogVisible"
-      title="请选择下列选项"
-      :width="dialogWidth"
-      center
-      append-to-body
+    <var-popup
+      v-model:show="sceneDialogVisible"
+      position="center"
       class="scene-dialog"
-      draggable
+      :style="{ width: dialogWidth, padding: '20px', borderRadius: '12px' }"
     >
-      <el-card v-if="sceneButtons.description" class="dialog-desc-card">
+      <div class="dialog-title" style="text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 15px; color: var(--color-primary)">请选择下列选项</div>
+      <div v-if="sceneButtons.description" class="dialog-desc-card">
         <div class="dialog-desc-text">{{ sceneButtons.description }}</div>
-      </el-card>
+      </div>
       <div class="scene-buttons-container">
-        <el-button 
+        <var-button 
           v-if="sceneButtons.btn1" 
           type="primary" 
-          plain 
+          outline 
           class="scene-btn" 
           @click="handleSceneButtonClick(1, sceneButtons.btn1)"
         >
           {{ sceneButtons.btn1 }}
-        </el-button>
-        <el-button 
+        </var-button>
+        <var-button 
           v-if="sceneButtons.btn2" 
           type="primary" 
-          plain 
+          outline 
           class="scene-btn" 
           @click="handleSceneButtonClick(2, sceneButtons.btn2)"
         >
           {{ sceneButtons.btn2 }}
-        </el-button>
-        <el-button 
+        </var-button>
+        <var-button 
           v-if="sceneButtons.btn3" 
           type="primary" 
-          plain 
+          outline 
           class="scene-btn" 
           @click="handleSceneButtonClick(3, sceneButtons.btn3)"
         >
           {{ sceneButtons.btn3 }}
-        </el-button>
+        </var-button>
       </div>
-    </el-dialog>
+    </var-popup>
 
     <!-- 多选推荐对话框 -->
-    <el-dialog
-      v-model="selectDialogVisible"
-      title="请从以下选项中选择"
-      :width="dialogWidth"
-      center
-      append-to-body
+    <var-popup
+      v-model:show="selectDialogVisible"
+      position="center"
       class="select-dialog"
-      draggable
+      :style="{ width: dialogWidth, padding: '20px', borderRadius: '12px' }"
     >
-      <el-card v-if="selectDescription" class="dialog-desc-card">
+      <div class="dialog-title" style="text-align: center; font-weight: bold; font-size: 18px; margin-bottom: 15px; color: var(--color-primary)">请从以下选项中选择</div>
+      <div v-if="selectDescription" class="dialog-desc-card">
         <div class="dialog-desc-text">{{ selectDescription }}</div>
-      </el-card>
+      </div>
       <div class="select-options-container">
-        <el-checkbox-group v-model="selectedValues" class="select-checkbox-group">
-          <el-checkbox 
+        <var-checkbox-group v-model="selectedValues" direction="vertical">
+          <var-checkbox 
             v-for="option in selectOptions" 
             :key="option" 
-            :label="option" 
+            :checked-value="option"
             class="select-checkbox-item"
           >
             {{ option }}
-          </el-checkbox>
-        </el-checkbox-group>
+          </var-checkbox>
+        </var-checkbox-group>
         <div class="select-dialog-footer">
-          <el-button @click="selectDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSelectConfirm" :disabled="selectedValues.length === 0">确认选择</el-button>
+          <var-button @click="selectDialogVisible = false">取消</var-button>
+          <var-button type="primary" @click="handleSelectConfirm" :disabled="selectedValues.length === 0">确认选择</var-button>
         </div>
       </div>
-    </el-dialog>
+    </var-popup>
 
     <!-- 对话历史抽屉 -->
-    <el-drawer
-      v-model="drawer"
-      title="对话历史"
-      :direction="direction"
-      size="300px"
+    <var-popup
+      v-model:show="drawer"
+      position="left"
+      :style="{ width: '300px', height: '100%' }"
     >
       <div class="drawer-content">
-        <div class="new-chat-container">
-          <el-button type="primary" plain class="new-chat-btn" :icon="Plus" @click="handleNewChat">
-            新建文途智行对话
-          </el-button>
+        <div class="drawer-header" style="padding: 16px; font-size: 18px; font-weight: bold; border-bottom: 1px solid var(--color-outline)">
+          对话历史
         </div>
-        <el-divider content-position="center">历史记录</el-divider>
+        <div class="new-chat-container" style="padding-top: 16px;">
+          <var-button type="primary" outline class="new-chat-btn" @click="handleNewChat">
+            <var-icon name="plus" />
+            新建文途智行对话
+          </var-button>
+        </div>
+        <var-divider description="历史记录" />
         <div class="history-list">
           <div 
             v-for="session in chatStore.sessions" 
@@ -266,37 +308,44 @@
             @click="handleSelectSession(session.id)"
           >
             <div class="history-item-content">
-              <el-icon><ChatDotRound /></el-icon>
+              <var-icon name="message-processing" />
               <span class="history-item-title">{{ session.title }}</span>
             </div>
             <div class="history-item-actions">
-              <el-button 
+              <var-button 
                 type="primary" 
-                link 
-                :icon="Edit" 
-                class="history-action-btn"
+                text 
+                round
+                class="history-action-btn rename-btn"
                 @click.stop="handleRenameSession(session.id, session.title)"
-              />
-              <el-button 
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M17 3L21 7L8 20H4V16L17 3Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </var-button>
+              <var-button 
                 type="danger" 
-                link 
-                :icon="CircleClose" 
+                text 
+                round
                 class="history-action-btn"
                 @click.stop="handleDeleteSession(session.id)"
-              />
+              >
+                <var-icon name="delete" size="16" />
+              </var-button>
             </div>
           </div>
-          <el-empty v-if="chatStore.sessions.length === 0" description="暂无对话历史" :image-size="80" />
+          <div v-if="chatStore.sessions.length === 0" class="empty-tip" style="padding-top: 40px;">
+            <var-result class="result-empty" title="暂无对话历史" />
+          </div>
         </div>
       </div>
-    </el-drawer>
+    </var-popup>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
-import { Loading, User, ChatDotRound, Picture, CircleClose, Memo, Plus, CopyDocument, Edit, Delete as DeleteIcon } from '@element-plus/icons-vue'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { Snackbar, Dialog } from '@varlet/ui'
 import axios from 'axios'
 import MarkdownIt from 'markdown-it'
 import agentIcon from '../assets/agent_icon.jpg'
@@ -357,35 +406,40 @@ const submitEdit = async (index: number) => {
 
 const handleCopy = (content: string) => {
   navigator.clipboard.writeText(content).then(() => {
-    ElMessage.success('已复制到剪贴板')
+    Snackbar.success('已复制到剪贴板')
   }).catch(() => {
-    ElMessage.error('复制失败')
+    Snackbar.error('复制失败')
   })
 }
 
 const handleDeleteMessage = (index: number) => {
-  ElMessageBox.confirm('确定要删除这条消息吗？', '提示', {
+  Dialog({
+    title: '提示',
+    message: '确定要删除这条消息吗？',
     confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    chatStore.deleteMessage(index)
-    ElMessage.success('消息已删除')
-  }).catch(() => {})
+    cancelButtonText: '取消'
+  }).then((action) => {
+    if (action === 'confirm') {
+      chatStore.deleteMessage(index)
+      Snackbar.success('消息已删除')
+    }
+  })
 }
 
 // 图片上传相关
 const uploadedImageUrl = ref('')
 const uploadedFileId = ref('')
 const isUploadingImage = ref(false)
+const fileList = ref<any[]>([])
 
 const handleFileChange = async (file: any) => {
-  const rawFile = file.raw
+  const rawFile = file.file
   if (!rawFile) return
 
   // 限制图片大小 10MB
   if (rawFile.size / 1024 / 1024 > 10) {
-    ElMessage.error('图片大小不能超过 10MB')
+    Snackbar.error('图片大小不能超过 10MB')
+    fileList.value = []
     return
   }
 
@@ -406,7 +460,7 @@ const handleFileChange = async (file: any) => {
         const base64 = e.target?.result as string
         uploadedImageUrl.value = base64
         uploadedFileId.value = base64 // 在 base64 模式下，直接存 base64 字符串
-        ElMessage.success('图片已就绪')
+        Snackbar.success('图片已就绪')
         isUploadingImage.value = false
       }
       reader.onerror = () => {
@@ -414,7 +468,7 @@ const handleFileChange = async (file: any) => {
       }
       reader.readAsDataURL(rawFile)
     } catch (error: any) {
-      ElMessage.error(error.message)
+      Snackbar.error(error.message)
       isUploadingImage.value = false
     }
   }
@@ -423,11 +477,12 @@ const handleFileChange = async (file: any) => {
 const removeUploadedImage = () => {
   uploadedImageUrl.value = ''
   uploadedFileId.value = ''
+  fileList.value = []
 }
 
 const uploadImageToCoze = async (file: File) => {
   if (!apiSettings.value.apiKey) {
-    ElMessage.warning('上传图片需要先配置 API Key')
+    Snackbar.warning('上传图片需要先配置 API Key')
     return
   }
 
@@ -449,13 +504,13 @@ const uploadImageToCoze = async (file: File) => {
 
     if (response.data && response.data.data && response.data.data.id) {
       uploadedFileId.value = response.data.data.id
-      ElMessage.success('图片上传成功')
+      Snackbar.success('图片上传成功')
     } else {
       throw new Error(response.data.msg || '上传失败')
     }
   } catch (error: any) {
     console.error('上传图片到 Coze 失败:', error)
-    ElMessage.error('上传图片失败: ' + (error.response?.data?.msg || error.message))
+    Snackbar.error('上传图片失败: ' + (error.response?.data?.msg || error.message))
     removeUploadedImage()
   } finally {
     isUploadingImage.value = false
@@ -589,11 +644,7 @@ const scrollToBottom = async () => {
 
 const formatMessage = (text: string): string => {
   if (!text) return ''
-  let formatted = text.replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  formatted = formatted.replace(/\n/g, '<br>')
-  formatted = formatted.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>')
-  formatted = formatted.replace(/`([^`]+)`/g, '<code>$1</code>')
-  return formatted
+  return md.render(text)
 }
 
 const formatAssistantMessage = (text: string): string => {
@@ -626,7 +677,7 @@ const goToMap = (text: string) => {
       emit('navigate', 'mapPlanning')
     } catch (e) {
       console.error('解析地图数据失败:', e, '\n原始数据:', match[1])
-      ElMessage.error('解析地图数据失败，请检查 AI 输出格式')
+      Snackbar.error('解析地图数据失败，请检查 AI 输出格式')
     }
   }
 }
@@ -643,7 +694,7 @@ const handleSceneButtonClick = (btnIndex: number, btnText: string) => {
   // 隐藏发送用户的选择，格式为 JSON 字符串
   const hiddenPrompt = `[USER_CHOICE]{"value": "${btnText}"}[/USER_CHOICE]\n`
   handleSendHidden(hiddenPrompt).catch(err => {
-    ElMessage.error('发送选择失败: ' + err.message)
+    Snackbar.error('发送选择失败: ' + err.message)
   })
 }
 
@@ -656,28 +707,31 @@ const handleSelectConfirm = () => {
   // 隐藏发送用户的选择，格式为 JSON 数组
   const hiddenPrompt = `model:确定游览方案\n[USER_CHOICE]{"values": ${JSON.stringify(selections)}}[/USER_CHOICE]`
   handleSendHidden(hiddenPrompt).catch(err => {
-    ElMessage.error('发送选择失败: ' + err.message)
+    Snackbar.error('发送选择失败: ' + err.message)
   })
 }
 
 const clearChat = () => {
   if (messages.value.length === 0) return
   
-  ElMessageBox.confirm('确定要清空当前聊天记录吗？', '提示', {
+  Dialog({
+    title: '提示',
+    message: '确定要清空当前聊天记录吗？',
     confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    chatStore.updateMessages([])
-    ElMessage.success('聊天记录已清空')
-  }).catch(() => {})
+    cancelButtonText: '取消'
+  }).then((action) => {
+    if (action === 'confirm') {
+      chatStore.updateMessages([])
+      Snackbar.success('聊天记录已清空')
+    }
+  })
 }
 
 // 侧边栏操作
 const handleNewChat = () => {
   chatStore.createNewChat()
   drawer.value = false
-  ElMessage.success('已开启新对话')
+  Snackbar.success('已开启新对话')
 }
 
 const handleSelectSession = (id: string) => {
@@ -687,16 +741,19 @@ const handleSelectSession = (id: string) => {
 }
 
 const handleRenameSession = (id: string, oldTitle: string) => {
-  ElMessageBox.prompt('请输入新的对话标题', '重命名对话', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    inputValue: oldTitle,
-    inputPattern: /\S+/,
-    inputErrorMessage: '标题不能为空'
-  }).then(({ value }) => {
-    chatStore.renameChat(id, value)
-    ElMessage.success('重命名成功')
-  }).catch(() => {})
+  Dialog({
+    title: '重命名对话',
+    message: '请输入新的对话标题',
+    // Varlet doesn't have prompt out of the box in Dialog, but we can simulate or just not use prompt directly.
+    // For simplicity, we just use prompt natively since Varlet doesn't have prompt dialog by default,
+    // or we skip it. Let's use window.prompt for mobile or custom input.
+  })
+  
+  const value = window.prompt('请输入新的对话标题', oldTitle)
+  if (value && value.trim()) {
+    chatStore.renameChat(id, value.trim())
+    Snackbar.success('重命名成功')
+  }
 }
 
 const handleDeleteSession = (id: string) => {
@@ -717,7 +774,7 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
   loadSettings()
 
   if (!apiSettings.value.apiKey) {
-    ElMessage.warning('请先在设置中配置 API Key')
+    Snackbar.warning('请先在设置中配置 API Key')
     return
   }
 
@@ -1008,6 +1065,7 @@ const handleSend = async () => {
   const enableModePrefix = localStorage.getItem('enable-mode-prefix') !== 'false' // 默认开启
   const prefix = enableModePrefix ? modeOptionsBtnGroup.value : ''
   const prefixedText = prefix && !text.startsWith(`${prefix}\n`) ? `${prefix}\n${text}` : text
+  
   await sendMessage(prefixedText, true)
 }
 
@@ -1178,6 +1236,336 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  --chat-page-bg: transparent;
+  --chat-surface: rgba(255, 255, 255, 0.92);
+  --chat-surface-muted: #f4f6f8;
+  --chat-surface-accent: rgba(64, 158, 255, 0.12);
+  --chat-border: rgba(15, 23, 42, 0.1);
+  --chat-border-strong: rgba(15, 23, 42, 0.16);
+  --chat-text-primary: rgba(17, 24, 39, 0.92);
+  --chat-text-secondary: rgba(17, 24, 39, 0.62);
+  --chat-user-bubble-bg: #9df29f;
+  --chat-user-bubble-text: #0f172a;
+  --chat-assistant-bubble-bg: #eeeff3;
+  --chat-assistant-bubble-text: rgba(17, 24, 39, 0.92);
+  --chat-input-bg: rgba(255, 255, 255, 0.96);
+  --chat-danger: #ff5f6d;
+  color: var(--chat-text-primary);
+}
+
+html.dark .ai-dialogue-page {
+  --chat-page-bg: transparent;
+  --chat-surface: rgba(35, 37, 39, 0.96);
+  --chat-surface-muted: #2c2f33;
+  --chat-surface-accent: rgba(76, 175, 255, 0.18);
+  --chat-border: rgba(255, 255, 255, 0.09);
+  --chat-border-strong: rgba(255, 255, 255, 0.14);
+  --chat-text-primary: rgba(244, 247, 250, 0.94);
+  --chat-text-secondary: rgba(244, 247, 250, 0.68);
+  --chat-user-bubble-bg: #35d28d;
+  --chat-user-bubble-text: #04150d;
+  --chat-assistant-bubble-bg: #2f2f30;
+  --chat-assistant-bubble-text: #d4d4d7;
+  --chat-input-bg: rgba(29, 30, 31, 0.98);
+  --chat-danger: #ff7b86;
+}
+
+.chat-input-container {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px;
+  position: fixed;
+  bottom: calc(65px + env(safe-area-inset-bottom));
+  left: 0;
+  right: 0;
+  z-index: 100;
+  pointer-events: none; /* 让预览区域不阻挡点击，子元素再恢复 */
+}
+
+.gemini-input-pill {
+  display: flex;
+  align-items: center;
+  background: var(--chat-input-bg);
+  border-radius: 32px;
+  padding: 6px 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--chat-border);
+  backdrop-filter: blur(20px);
+  pointer-events: auto;
+  min-height: 56px;
+  gap: 8px;
+}
+
+/* 左侧：功能组合区 */
+.left-action-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.secondary-icon-btn {
+  color: var(--chat-text-secondary);
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 模式按钮特化：使用品牌色增强识别度 */
+.mode-btn {
+  color: #A8A7FE !important; /* 柔和的紫色，代表 AI/智能 */
+}
+
+/* 上传按钮特化：略微提亮 */
+.upload-btn {
+  color: var(--chat-text-primary) !important;
+  opacity: 0.85;
+}
+
+html.dark .secondary-icon-btn {
+  background: rgba(255, 255, 255, 0.04); /* 暗色模式下增加极淡的底色 */
+}
+
+html.dark .mode-btn {
+  color: #C1C0FF !important; /* 暗色模式下使用更亮的紫色 */
+}
+
+html.dark .upload-btn {
+  color: #ffffff !important;
+}
+
+.secondary-icon-btn:hover {
+  transform: scale(1.08);
+  background: rgba(var(--color-primary-rgb), 0.12);
+}
+
+html.dark .secondary-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.secondary-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.vertical-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--chat-border);
+  margin: 0 4px;
+  opacity: 0.6;
+}
+
+html.dark .vertical-divider {
+  background: rgba(255, 255, 255, 0.2);
+  opacity: 0.8;
+}
+
+.mode-icon {
+  filter: drop-shadow(0 0 2px rgba(var(--color-primary-rgb), 0.2));
+  transition: transform 0.3s ease;
+}
+
+.mode-btn:hover .mode-icon {
+  transform: rotate(15deg);
+}
+
+.icon-stack {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.sub-icon {
+  position: absolute;
+  bottom: -2px;
+  right: -4px;
+  color: #ffffff;
+  background: #A8A7FE;
+  border-radius: 50%;
+  padding: 1px;
+  border: 1px solid var(--chat-input-bg);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+html.dark .sub-icon {
+  background: #83CFF9;
+  border-color: #1d1e1f;
+}
+
+.mode-popover {
+  background: var(--chat-input-bg);
+  border-radius: 20px;
+  padding: 8px;
+  border: 1px solid var(--chat-border);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  min-width: 150px;
+  backdrop-filter: blur(20px);
+}
+
+.mode-popover-item {
+  padding: 12px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--chat-text-secondary);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-popover-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--chat-text-primary);
+}
+
+.mode-popover-item.active {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+/* 输入区域 */
+.input-area {
+  flex: 1;
+  min-width: 0;
+}
+
+.pill-textarea {
+  --field-decorator-standard-padding-top: 0;
+  --field-decorator-standard-padding-bottom: 0;
+}
+
+.pill-textarea :deep(textarea) {
+  font-size: 16px;
+  color: var(--chat-text-primary);
+  line-height: 1.4;
+  padding: 10px 0;
+  max-height: 120px;
+}
+
+.pill-textarea :deep(.var-field-decorator__placeholder) {
+  font-size: 14px;
+  color: var(--chat-text-secondary);
+  opacity: 0.8;
+}
+
+html.dark .pill-textarea :deep(.var-field-decorator__placeholder) {
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* 右侧：动作区 */
+.right-action-area {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+}
+
+.send-idle-icon {
+  transform: rotate(-15deg);
+  opacity: 0.7;
+}
+
+.main-action {
+  width: 42px;
+  height: 42px;
+}
+
+.send-pill-btn {
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  background: linear-gradient(135deg, #83CFF9 0%, #A8A7FE 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(131, 207, 249, 0.4), 
+              inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  --button-loading-icon-size: 20px; /* 缩小按钮内置 loading 图标 */
+}
+
+.send-svg-icon {
+  transform: rotate(-15deg) translateX(1px);
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.15));
+  transition: transform 0.3s ease;
+}
+
+.send-pill-btn:hover .send-svg-icon {
+  transform: rotate(0deg) scale(1.1);
+}
+
+.send-pill-btn:active {
+  transform: scale(0.95);
+}
+
+/* 图片预览浮窗 */
+.image-preview-floating {
+  align-self: flex-start;
+  margin-left: 54px; /* 对齐左侧上传按钮中心 */
+  margin-bottom: 8px;
+  pointer-events: auto;
+}
+
+.image-preview-floating .image-preview-wrapper {
+  position: relative;
+  width: 44px; /* 缩小预览图尺寸 */
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  border: 1.5px solid var(--color-primary);
+  background: var(--chat-input-bg);
+}
+
+.image-preview-floating .remove-image-btn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ffffff;
+  border-radius: 50%;
+  color: var(--chat-danger);
+  font-size: 14px;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  z-index: 2;
+}
+
+html.dark .image-preview-floating .remove-image-btn {
+  background: #1d1e1f;
+}
+
+.image-preview-floating .upload-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(1px);
+}
+
+.image-preview-floating :deep(.var-loading) {
+  --loading-circle-size: 16px; /* 缩小上传中的 loading 图标 */
+}
+
+/* 动画 */
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.8);
 }
 
 .chat-container {
@@ -1186,12 +1574,41 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   flex-direction: column;
   height: 100%;
   min-height: 0;
+  background: var(--chat-page-bg);
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px;
+  background: var(--chat-input-bg);
+  border-bottom: 1px solid var(--chat-border);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.history-btn {
+  margin-right: 8px;
+  color: var(--color-primary);
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--app-text-primary);
+}
+
+.header-spacer {
+  flex: 1;
 }
 
 .chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
+  padding-bottom: 100px; /* 为浮动输入框留出空间 */
   min-height: 0;
 }
 
@@ -1225,6 +1642,109 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   padding: 0 4px;
 }
 
+.message-text {
+  word-break: break-word;
+}
+
+/* Markdown 样式优化 */
+.markdown-body {
+  line-height: 1.6;
+}
+
+.markdown-body :deep(p) {
+  margin: 0 0 8px 0;
+}
+
+.markdown-body :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4) {
+  margin: 12px 0 8px 0;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.markdown-body :deep(li) {
+  margin: 4px 0;
+}
+
+.markdown-body :deep(code) {
+  padding: 0.2em 0.4em;
+  margin: 0;
+  font-size: 85%;
+  background-color: rgba(175, 184, 193, 0.2);
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+}
+
+.markdown-body :deep(pre) {
+  padding: 12px;
+  overflow: auto;
+  font-size: 85%;
+  line-height: 1.45;
+  background-color: rgba(175, 184, 193, 0.1);
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.markdown-body :deep(pre code) {
+  padding: 0;
+  margin: 0;
+  background-color: transparent;
+  border: 0;
+  font-size: 100%;
+  word-break: normal;
+  white-space: pre;
+}
+
+.markdown-body :deep(blockquote) {
+  padding: 0 1em;
+  color: var(--chat-text-secondary);
+  border-left: 0.25em solid var(--chat-border);
+  margin: 8px 0;
+}
+
+.markdown-body :deep(table) {
+  display: block;
+  width: 100%;
+  width: max-content;
+  max-width: 100%;
+  overflow: auto;
+  border-spacing: 0;
+  border-collapse: collapse;
+  margin: 8px 0;
+}
+
+.markdown-body :deep(table tr) {
+  background-color: transparent;
+  border-top: 1px solid var(--chat-border);
+}
+
+.markdown-body :deep(table th),
+.markdown-body :deep(table td) {
+  padding: 6px 13px;
+  border: 1px solid var(--chat-border);
+}
+
+.markdown-body :deep(a) {
+  color: var(--color-primary);
+  text-decoration: none;
+}
+
+.markdown-body :deep(a:hover) {
+  text-decoration: underline;
+}
+
 .message-item:hover .message-tools {
   opacity: 1;
   visibility: visible;
@@ -1250,7 +1770,7 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 .map-action-wrapper {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px dashed var(--el-border-color-lighter);
+  border-top: 1px dashed var(--chat-border);
   display: flex;
   justify-content: center;
 }
@@ -1258,43 +1778,65 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 @media (max-width: 768px) {
   .chat-messages {
     padding: 10px;
+    padding-bottom: 110px;
+  }
+  
+  .chat-input-container {
+    padding: 8px 12px;
   }
   
   .message-content {
     max-width: 90%;
   }
-  
-  .chat-input {
-    grid-template-columns: 1fr auto;
-    gap: 8px;
-    padding: 8px 12px;
-  }
-  
-  .chat-toolbar {
-    font-size: 12px;
-    gap: 8px;
+
+  .gemini-input-pill {
+    min-height: 48px;
+    padding: 4px 8px;
+    gap: 4px;
   }
 
-  .toolbar-text {
-    display: none;
+  .secondary-icon-btn {
+    width: 34px;
+    height: 34px;
   }
 
-  .chat-toolbar .el-button {
-    padding: 8px;
+  .vertical-divider {
+    height: 16px;
+    margin: 0 2px;
   }
-  
-  .mode-change-btn :deep(.el-segmented) {
-    --el-segmented-item-selected-color: var(--el-color-primary);
-  }
-  
-  .chat-textarea :deep(.el-textarea__inner) {
+
+  .pill-textarea :deep(textarea) {
     font-size: 14px;
-    padding: 8px;
+    padding: 8px 0;
+  }
+
+  .main-action {
+    width: 36px;
+    height: 36px;
+  }
+
+  .send-pill-btn {
+    width: 36px;
+    height: 36px;
+  }
+
+  .send-icon {
+    font-size: 20px !important;
+  }
+
+  .image-preview-floating {
+    margin-left: 42px;
+    margin-bottom: 6px;
+  }
+
+  .image-preview-floating .image-preview-wrapper {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
   }
   
-  .chat-actions .el-button {
-    min-width: 60px;
-    padding: 8px 12px;
+  .image-preview-floating :deep(.var-loading) {
+    --loading-circle-size: 14px;
   }
   
   .scene-btn {
@@ -1329,8 +1871,7 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 
 .message-role {
   font-size: 12px;
-  /* AI对话页面，用户与AI的昵称颜色 */
-  color: #909399;
+  color: var(--chat-text-secondary);
   margin-bottom: 5px;
 }
 
@@ -1341,6 +1882,7 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 .message-card {
   border-radius: 12px;
   padding: 12px 16px;
+  border: 1px solid var(--chat-border);
 }
 
 .message-image-wrapper {
@@ -1384,12 +1926,52 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 
 .chat-input-row {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: flex-end;
+}
+
+.collapsible-area {
+  max-height: 0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.collapsible-area.expanded {
+  max-height: 200px;
+  opacity: 1;
+  transform: translateY(0);
+  margin-bottom: 8px;
+}
+
+.toggle-toolbar-btn {
+  margin-bottom: 6px;
+  color: var(--chat-text-secondary);
+  transition: all 0.3s;
+  padding: 0;
+  min-width: 32px;
+  height: 32px;
+}
+
+.toggle-toolbar-btn:hover {
+  color: var(--color-primary);
 }
 
 .chat-textarea {
   flex: 1;
+  min-width: 0;
+}
+
+.chat-textarea :deep(textarea) {
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.chat-textarea :deep(.var-field-decorator) {
+  min-height: 38px;
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 .chat-toolbar {
@@ -1397,8 +1979,17 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.chat-toolbar .var-button,
+.chat-actions .var-button,
+.map-action-wrapper .var-button,
+.edit-actions .var-button,
+.scene-btn,
+.select-dialog .var-button {
+  border-radius: 0 !important;
 }
 
 .drawer-content {
@@ -1419,7 +2010,7 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 
 .toolbar-label {
   font-size: 14px;
-  color: var(--el-text-color-regular);
+  color: var(--chat-text-secondary);
 }
 
 .history-list {
@@ -1437,17 +2028,17 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
-  background-color: var(--el-fill-color-light);
+  background-color: var(--chat-surface-muted);
   border: 1px solid transparent;
 }
 
 .history-item:hover {
-  background-color: var(--el-fill-color);
+  background-color: var(--chat-surface);
 }
 
 .history-item.active {
-  background-color: var(--el-color-primary-light-9);
-  border-color: var(--el-color-primary);
+  background-color: var(--chat-surface-accent);
+  border-color: var(--color-primary);
 }
 
 .history-item-content {
@@ -1463,14 +2054,15 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: var(--el-text-color-primary);
+  color: var(--chat-text-primary);
 }
 
 .history-item-actions {
   display: flex;
-  gap: 4px;
+  gap: 0px;
   opacity: 1; /* 改为一直显示 */
   transition: opacity 0.3s;
+  flex-shrink: 0;
 }
 
 .history-item:hover .history-item-actions {
@@ -1478,7 +2070,25 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
 }
 
 .history-action-btn {
-  padding: 4px;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  transition: all 0.2s ease;
+  color: var(--chat-text-secondary);
+}
+
+.rename-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--color-primary) !important;
+}
+
+.rename-btn:active {
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+html.dark .rename-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  color: var(--color-primary) !important;
 }
 
 .drawer-toolbar {
@@ -1488,18 +2098,20 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   margin-bottom: 16px;
 }
 
-.chat-toolbar-upload :deep(.el-upload) {
-  display: flex;
+.chat-toolbar-upload {
+  display: inline-flex;
   align-items: center;
 }
 
-.chat-toolbar-clear {
-  margin-left: auto;
+.chat-toolbar-upload :deep(.var-uploader__action) {
+  display: flex;
+  align-items: center;
+  margin: 0;
 }
 
 .image-preview-container {
   padding: 8px;
-  background: var(--el-fill-color-lighter);
+  background: var(--chat-surface-muted);
   border-radius: 8px;
   margin-bottom: 8px;
   display: flex;
@@ -1523,8 +2135,8 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   top: -8px;
   right: -8px;
   cursor: pointer;
-  color: var(--el-color-danger);
-  background: white;
+  color: var(--chat-danger);
+  background: var(--chat-input-bg);
   border-radius: 50%;
   font-size: 18px;
 }
@@ -1535,17 +2147,12 @@ const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
   align-items: center;
   justify-content: center;
   font-size: 12px;
-  color: var(--el-text-color-secondary);
+  color: var(--chat-text-secondary);
 }
 
 .chat-actions {
   display: flex;
   align-self: flex-end;
-}
-
-.chat-actions .el-button {
-  margin-left: 0;
-  height: 40px;
 }
 
 .empty-tip {
@@ -1561,33 +2168,17 @@ html.dark .chat-container {
   background: transparent;
 }
 
-/* 空白状态图片样式：圆角效果 */
-.empty-tip :deep(.el-empty__image img) {
-  border-radius: 45px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-/* 暗色模式下给空白状态图片设置偏黑色遮罩效果 */
-html.dark .empty-tip :deep(.el-empty__image img) {
-  filter: brightness(0.5) contrast(1.2);
-  opacity: 0.8;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
-
 .message-card.user {
-  /* ========= 可自定义：用户聊天框背景颜色（浅色模式） ========= */
-  background: #9DF29F;
-  border-color: #EFEFEF;
+  background: var(--chat-user-bubble-bg);
+  border-color: transparent;
 }
 
 .message-card.user .message-text {
-  /* ========= 可自定义：用户聊天框文字颜色（浅色模式） ========= */
-  color: #000000;
+  color: var(--chat-user-bubble-text);
 }
 
 .message-card.assistant .message-text {
-  /* ========= 可自定义：AI聊天框文字颜色（浅色模式） ========= */
-  color: #000000;
+  color: var(--chat-assistant-bubble-text);
   line-height: 1.45;
 }
 
@@ -1640,34 +2231,25 @@ html.dark .empty-tip :deep(.el-empty__image img) {
 */
 
 .message-card.assistant {
-  /* ========= 可自定义：AI聊天框（浅色模式）颜色 =========
-    - 修改AI气泡背景：background
-    - 修改AI气泡边框：border-color
-    - 修改AI文字颜色：配合 .message-text（或单独加 .message-card.assistant .message-text）一起改
-  */
-  background: #EEEEF0;
+  background: var(--chat-assistant-bubble-bg);
 }
 
 html.dark .message-card.user {
-  /* ========= 可自定义：用户聊天框（深色模式）颜色 ========= */
-  background: #35D28D;
-  border-color: #29292A;
+  background: var(--chat-user-bubble-bg);
+  border-color: transparent;
 }
 
 html.dark .message-card.assistant {
-  /* ========= 可自定义：AI聊天框（深色模式）颜色 ========= */
-  background: #2F2F30;
-  border-color: #29292A;
+  background: var(--chat-assistant-bubble-bg);
+  border-color: var(--chat-border);
 }
 
 html.dark .message-card.user .message-text {
-  /* ========= 可自定义：用户聊天框文字颜色（深色模式） ========= */
-  color: #000000;
+  color: var(--chat-user-bubble-text);
 }
 
 html.dark .message-card.assistant .message-text {
-  /* ========= 可自定义：AI聊天框文字颜色（深色模式） ========= */
-  color: #D4D4D7;
+  color: var(--chat-assistant-bubble-text);
 }
 
 /* ========= 可自定义：用户聊天框（深色模式）颜色 =========
@@ -1686,49 +2268,11 @@ html.dark .message-card.assistant .message-text {
   }
 */
 
+
 html.dark .chat-input {
-  /* ========= 可自定义：底部聊天栏（深色模式）背景颜色 ========= */
-  /* 底部输入栏外圈盒子背景颜色 */
-  background: #1D1E1F;
-  /* 输入栏上方与聊天栏分割线颜色 */
-  border-top-color: #29292A;
+  background: var(--chat-input-bg);
+  border-top-color: var(--chat-border);
 }
-.chat-input {
-  /* ========= 可自定义：底部聊天栏（浅色模式）背景颜色 ========= */
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 12px 16px;
-  background: var(--el-bg-color);
-  border-top: 1px solid var(--el-border-color-lighter);
-}
-
-/* ========= 可自定义：底部聊天栏按钮颜色（仅聊天区范围） =========
-  方式1：通过 Element Plus CSS 变量（推荐，影响范围仅在 chat-input 内）
-  - 发送按钮（primary）：修改 --el-color-primary
-  - 清空按钮（danger）：修改 --el-color-danger
-
-  例如（取消注释并改颜色值）：
-  .chat-input {
-    --el-color-primary: #409eff;
-    --el-color-danger: #f56c6c;
-  }
-*/
-
-/* 方式2：精确覆盖按钮样式（需要时再用，取消注释并改颜色值）
-  .chat-actions :deep(.el-button--primary) {
-    background-color: #409eff;
-    border-color: #409eff;
-    color: #ffffff;
-  }
-
-  .chat-actions :deep(.el-button--danger) {
-    background-color: #f56c6c;
-    border-color: #f56c6c;
-    color: #ffffff;
-  }
-*/
 
 .scene-buttons-container {
   display: flex;
@@ -1745,25 +2289,16 @@ html.dark .chat-input {
   border-radius: 8px;
 }
 
-.scene-dialog :deep(.el-dialog__header) {
-  margin-bottom: 0;
-}
-
-.scene-dialog :deep(.el-dialog__title) {
-  font-weight: bold;
-  color: var(--el-color-primary);
-}
-
 .dialog-desc-card {
   margin-bottom: 20px;
-  background-color: var(--el-fill-color-light);
+  background-color: var(--chat-surface-muted);
   border: none;
 }
 
 .dialog-desc-text {
   font-size: 15px;
   line-height: 1.6;
-  color: var(--el-text-color-primary);
+  color: var(--chat-text-primary);
   white-space: pre-wrap;
 }
 
@@ -1782,7 +2317,7 @@ html.dark .chat-input {
 }
 
 .select-options-container::-webkit-scrollbar-thumb {
-  background-color: var(--el-border-color-darker);
+  background-color: var(--chat-border-strong);
   border-radius: 3px;
 }
 
@@ -1809,10 +2344,5 @@ html.dark .chat-input {
   justify-content: center;
   gap: 20px;
   margin-top: 10px;
-}
-
-.select-dialog :deep(.el-dialog__title) {
-  font-weight: bold;
-  color: var(--el-color-primary);
 }
 </style>

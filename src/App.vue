@@ -1,35 +1,24 @@
 <template>
   <div class="app-container">
-    <div class="header-controls">
-      <el-switch
-        v-model="isDarkMode"
-        active-text="暗色"
-        inactive-text="浅色"
-        @change="handleThemeChange"
-      />
-    </div>
-    <el-tabs
-      v-model="activeName"
-      class="index-tabs"
-      tab-position="bottom">
+    <div class="index-tabs">
       
-      <el-tab-pane name="indexPage">
+      <div v-show="activeName === 'indexPage'" class="tab-pane">
         <IndexPage @navigate="handleNavigate" />
-      </el-tab-pane>
+      </div>
       
-      <el-tab-pane name="aiDialogue">
+      <div v-show="activeName === 'aiDialogue'" class="tab-pane">
         <AiDialoguePage :active-tab="activeName" @navigate="handleNavigate" />
-      </el-tab-pane>
+      </div>
       
-      <el-tab-pane name="mapPlanning">
+      <div v-show="activeName === 'mapPlanning'" class="tab-pane">
         <MapPlanningPage :active-tab="activeName" @navigate="handleNavigate" />
-      </el-tab-pane>
+      </div>
       
-      <el-tab-pane name="settingPage">
+      <div v-show="activeName === 'settingPage'" class="tab-pane">
         <SettingPage @navigate="handleNavigate" />
-      </el-tab-pane>
+      </div>
       
-    </el-tabs>
+    </div>
 
     <!-- 自定义底部导航栏 -->
     <div class="custom-bottom-nav">
@@ -38,7 +27,7 @@
         :class="{ active: activeName === 'indexPage' }"
         @click="activeName = 'indexPage'"
       >
-        <el-icon><HomeFilled /></el-icon>
+        <var-icon name="home" />
         <span class="nav-label">首页</span>
       </div>
       <div 
@@ -46,7 +35,7 @@
         :class="{ active: activeName === 'aiDialogue' }"
         @click="activeName = 'aiDialogue'"
       >
-        <el-icon><ChatLineRound /></el-icon>
+        <var-icon name="message-text-outline" />
         <span class="nav-label">AI对话</span>
       </div>
       <div 
@@ -54,7 +43,7 @@
         :class="{ active: activeName === 'mapPlanning' }"
         @click="activeName = 'mapPlanning'"
       >
-        <el-icon><MapLocation /></el-icon>
+        <var-icon name="map-marker" />
         <span class="nav-label">路线</span>
       </div>
       <div 
@@ -62,7 +51,7 @@
         :class="{ active: activeName === 'settingPage' }"
         @click="activeName = 'settingPage'"
       >
-        <el-icon><Setting /></el-icon>
+        <var-icon name="cog" />
         <span class="nav-label">设置</span>
       </div>
     </div>
@@ -71,44 +60,21 @@
 
 <script lang="ts" setup>
 import { ref, onMounted } from 'vue'
-import { HomeFilled, ChatLineRound, Setting, MapLocation } from '@element-plus/icons-vue'
-import type { TabsPaneContext } from 'element-plus'
 import IndexPage from './components/IndexPage.vue'
 import AiDialoguePage from './components/AiDialoguePage.vue'
 import MapPlanningPage from './components/MapPlanningPage.vue'
 import SettingPage from './components/SettingPage.vue'
+import { useThemeStore } from './stores/themeStore'
 
+const themeStore = useThemeStore()
 const activeName = ref('indexPage')
-const isDarkMode = ref(false)
-
-const handleClick = (tab: TabsPaneContext, event: Event) => {
-  console.log(tab, event)
-}
 
 const handleNavigate = (tabName: string) => {
   activeName.value = tabName
 }
 
-const applyTheme = (isDark: boolean) => {
-  document.documentElement.classList.toggle('dark', isDark)
-  document.body.classList.toggle('dark', isDark)
-}
-
-const loadTheme = () => {
-  const saved = localStorage.getItem('theme-mode')
-  isDarkMode.value = saved === 'dark'
-  applyTheme(isDarkMode.value)
-}
-
-const handleThemeChange = (val: string | number | boolean) => {
-  const nextIsDark = Boolean(val)
-  isDarkMode.value = nextIsDark
-  localStorage.setItem('theme-mode', nextIsDark ? 'dark' : 'light')
-  applyTheme(nextIsDark)
-}
-
 onMounted(() => {
-  loadTheme()
+  themeStore.loadTheme()
 
   // 处理手机切屏/后台挂起逻辑
   document.addEventListener('visibilitychange', () => {
@@ -151,22 +117,29 @@ html {
   --app-tabs-header-bg: rgba(255, 255, 255, 0.55);
   --app-tabs-header-border-color: rgba(0, 0, 0, 0.08);
   --app-tabs-header-blur: 20px;
+  --app-text-primary: #303133;
 
   --el-bg-color-page: var(--app-page-bg);
+  --color-text: var(--app-text-primary);
+  --color-primary: #3a7afe;
 }
 
 html.dark {
   /* ========= 可自定义：深色模式（全局背景/导航栏） ========= */
-  --app-page-bg: #1d1e1fec;
-  --app-tabs-header-bg: rgba(29, 30, 31, 0.55);
+  --app-page-bg: #141414;
+  --app-tabs-header-bg: rgba(20, 20, 20, 0.75);
   --app-tabs-header-border-color: rgba(255, 255, 255, 0.10);
   --app-tabs-header-blur: 20px;
+  --app-text-primary: #e5eaf3;
 
   --el-bg-color-page: var(--app-page-bg);
+  --color-text: var(--app-text-primary);
+  --color-primary: #3a7afe;
 }
 
 html, body {
   background: var(--app-page-bg);
+  color: var(--app-text-primary);
 }
 
 #app {
@@ -186,72 +159,21 @@ html, body {
   position: relative;
 }
 
-.header-controls {
-  position: fixed; /* 改为 fixed 以便在长滚屏页面中始终可见 */
-  top: calc(10px + env(safe-area-inset-top)); /* 考虑手机顶部的安全区域（如灵动岛、挖孔） */
-  right: 20px;
-  z-index: 2000;
-  display: flex;
-  align-items: center;
-  background: var(--app-tabs-header-bg);
-  padding: 6px 12px;
-  border-radius: 25px;
-  backdrop-filter: blur(15px);
-  border: 1px solid var(--app-tabs-header-border-color);
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-}
-
 /* 响应式适配：移动端 (屏幕宽度 <= 768px) */
 @media (max-width: 768px) {
   .header-controls {
     top: 10px;
     right: 15px;
-    padding: 2px 6px;
+    padding: 4px 8px;
   }
   
-  .header-controls :deep(.el-switch__label) {
+  .theme-text {
     display: none;
   }
-  
-  .header-controls :deep(.el-switch) {
-    height: 20px;
+
+  .index-tabs {
+    padding-bottom: 0;
   }
-
-  .index-tabs .el-tabs__item {
-    font-size: 14px;
-    height: 60px;
-  }
-  
-  .version-tag {
-  position: fixed;
-  bottom: 2px;
-  right: 5px;
-  font-size: 8px;
-  color: rgba(0, 0, 0, 0.2);
-  z-index: 1001;
-  pointer-events: none;
-}
-
-html.dark .version-tag {
-  color: rgba(255, 255, 255, 0.1);
-}
-
-.index-tabs .el-tabs__content {
-    padding: 0;
-    padding-bottom: 60px;
-  }
-}
-
-/* 强制隐藏所有 Element Plus 选项卡头部 */
-:deep(.el-tabs__header),
-.el-tabs__header {
-  display: none !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
 }
 
 .index-tabs {
@@ -259,11 +181,6 @@ html.dark .version-tag {
   min-height: 0;
   display: flex;
   flex-direction: column;
-}
-
-/* 隐藏原本的 el-tabs 头部，改用自定义底部导航 */
-.index-tabs .el-tabs__header {
-  display: none !important;
 }
 
 .custom-bottom-nav {
@@ -292,12 +209,16 @@ html.dark .version-tag {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: #909399;
+  color: var(--color-text);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
-.nav-item .el-icon {
+.nav-item.active {
+  color: var(--color-primary);
+}
+
+.nav-item .var-icon {
   font-size: 24px; /* 稍微缩小图标 */
   margin-bottom: 3px;
 }
@@ -308,12 +229,12 @@ html.dark .version-tag {
   line-height: 1;
 }
 
-.index-tabs .el-tabs__content {
+.tab-pane {
   flex: 1;
-  min-height: 0;
+  height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
-  padding-bottom: calc(70px + env(safe-area-inset-bottom)); /* 匹配导航栏高度 */
+  padding-bottom: 0;
   box-sizing: border-box;
   background: transparent;
   
@@ -323,59 +244,8 @@ html.dark .version-tag {
 }
 
 /* 隐藏滚动条 (Chrome / Safari / Edge) */
-.index-tabs .el-tabs__content::-webkit-scrollbar {
+.tab-pane::-webkit-scrollbar {
   display: none;
-}
-
-.index-tabs .el-tab-pane {
-  height: 100%;
-}
-
-.info-dialog .el-dialog__header {
-  text-align: center;
-}
-
-.info-dialog .el-dialog__title {
-  font-size: 18px;
-  font-weight: bold;
-}
-
-html.dark .info-dialog .el-dialog__header {
-  /* 问卷抬头下方分割线颜色，默认与背景一致 */
-  border-bottom: 1px solid #141414;
-}
-
-html.dark .info-dialog .el-dialog__title {
-  /* 问卷标题字体颜色 */
-  color: e4e7ed;
-}
-
-/* html.dark .info-dialog .el-dialog__body {
-  background: #141414;
-} */
-
-html.dark .info-dialog .el-dialog__footer {
-  /* 问卷按钮所在页脚颜色 */
-  background: #141414;
-  /* 问卷按钮页脚分割线 */
-  border-top: 1px solid #141414;
-}
-
-html.dark .info-dialog .el-form {
-  /* 问卷表单之间gap背景颜色 */
-  background: #141414;
-}
-
-html.dark .info-dialog .el-form-item {
-  /* 问卷选选项栏目边角颜色，默认与背景一致 */
-  background: #141414;
-}
-
-html.dark .info-dialog .el-form-item__label {
-  /* 问卷左侧问题背景颜色 */
-  background: #141414;
-  /* 问卷左侧问题字体颜色 */
-  color: #e4e7ed;
 }
 
 /* 设置 tooltip 淡入淡出时长为 0 */

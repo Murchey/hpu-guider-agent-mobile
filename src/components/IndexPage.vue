@@ -17,197 +17,135 @@
         <p class="welcome-subtitle">为您智能推荐导游路线和旅游项目</p>
         <!-- 精选景点走马灯 -->
         <div class="carousel-section">
-          <el-carousel :interval="4000" :height="carouselHeight" class="custom-carousel">
-            <el-carousel-item v-for="item in 8" :key="item">
+          <var-swipe class="custom-carousel" :autoplay="4000">
+            <var-swipe-item v-for="item in 8" :key="item">
               <div class="carousel-item-content">
                 <img :src="recommendPlaces[item - 1]" :alt="'place' + item" class="carousel-image" />
               </div>
-            </el-carousel-item>
-          </el-carousel>
+            </var-swipe-item>
+          </var-swipe>
         </div>
 
 
         <!-- 操作按钮 -->
         <div class="action-buttons">
-          <el-button type="primary" size="large" round @click="dialogFormVisible = true" class="big-action-btn">
+          <var-button type="primary" size="large" round @click="dialogFormVisible = true" class="big-action-btn">
             让AI懂你喜好
-          </el-button>
-          <el-button type="success" size="large" round @click="handleSocialPublish" class="big-action-btn">
+          </var-button>
+          <var-button type="success" size="large" round @click="handleSocialPublish" class="big-action-btn">
             分享旅游经历
-          </el-button>
+          </var-button>
         </div>
 
         <!-- 用户画像问卷抽屉 -->
-        <el-drawer 
-          v-model="dialogFormVisible" 
-          title="请完成下面的问卷调查" 
-          :size="drawerSize"
+        <var-popup 
+          v-model:show="dialogFormVisible" 
+          :position="drawerDirection"
+          :style="{ width: drawerDirection === 'right' ? drawerSize : '100%', height: drawerDirection === 'bottom' ? drawerSize : '100%' }"
           class="info-drawer"
-          :direction="drawerDirection"
-          append-to-body
         >
-          <el-form :model="form" class="profile-form" :label-position="labelPosition" :label-width="formLabelWidth">
-            <el-form-item label="旅行人数">
-              <el-input v-model="form.travelNumber" style="width: 100%" placeholder="输入旅行人数(个)" />
-            </el-form-item>
-            <el-form-item label="旅行天数">
-              <el-input v-model="form.travelDays" style="width: 100%" placeholder="输入旅行消耗时间(天)" />
-            </el-form-item>
-            <el-form-item label="旅行预算">
-              <el-input v-model="form.travelBudget" style="width: 100%" placeholder="输入您期望的预算(元)" />
-            </el-form-item>
-            <el-form-item label="出发日期">
-              <el-date-picker
-                v-model="form.startDate"
-                type="date"
-                aria-label="选择日期"
-                placeholder="请选择出发日期"
-                style="width: 100%"
-                value-format="YYYY-MM-DD"
-              />
-            </el-form-item>
-            <el-form-item label="出发地点">
-              <el-input v-model="form.originPlace" style="width: 100%" placeholder="输入您期望的出发地点" />
-            </el-form-item>
-            <el-form-item label="交通方式">
-              <el-radio-group v-model="form.travelMethod" :size="formItemSize" fill="#409eff">
-              <el-radio-button label="驾车" value="驾车" />
-              <el-radio-button label="骑行" value="骑行" />
-              <el-radio-button label="公共交通" value="公共交通" />
-              <el-radio-button label="步行" value="步行" />
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="出行风格">
-              <el-radio-group v-model="form.travelStyle" :size="formItemSize" fill="#409eff">
-                
-                <el-tooltip 
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
-                >
-                  <template #content><div style="font-size: 14px;">核心诉求为身心放松，主打无计划慢节奏，不赶景点、不强制打卡，<br/>
-                    以酒店 / 民宿休憩、本地随性闲逛为核心，全程拒绝高强度奔波</div></template>
-                <el-radio-button label="松弛度假" value="松弛度假" />
-                </el-tooltip>
-
-                <el-tooltip 
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
-                >
-                  <template #content><div style="font-size: 14px;">追求单位时间内游览效率最大化，行程紧凑、目标明确，<br/>
-                    通过科学规划覆盖尽可能多的核心景点与打卡位</div></template>
-                <el-radio-button label="高效打卡" value="高效打卡" />
-                </el-tooltip>
-
-                <el-tooltip 
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
-                >
-                  <template #content><div style="font-size: 14px;">侧重历史脉络、建筑美学、艺术展览或非遗民俗，<br/>
-                    愿意在单一地点停留较长时间进行深度学习与感悟</div></template>
-                <el-radio-button label="人文深度" value="人文深度" />
-                </el-tooltip>
-
-                <el-tooltip 
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
-                >
-                  <template #content><div style="font-size: 14px;">亲近自然地理，包含徒步、登山、观鸟、露营等轻量或专业户外活动，<br/>
-                    对自然风光、生态环境有极高向往</div></template>
-                <el-radio-button label="自然户外" value="自然户外" />
-                </el-tooltip>
-
-                <el-tooltip 
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
-                >
-                  <template #content><div style="font-size: 14px;">以“吃”为行程核心驱动力，寻访地道老字号、街头小吃或特色餐厅，<br/>
-                    通过味觉深度体验城市烟火气</div></template>
-                <el-radio-button label="美食寻味" value="美食寻味" />
-                </el-tooltip>
-
-                <el-tooltip 
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
-                >
-                  <template #content><div style="font-size: 14px;">主打随机感，通过 CityWalk 方式探索城市街巷，<br/>
-                    挖掘被大众忽略的社区细节与城市肌理</div></template>
-                <el-radio-button label="城市漫游" value="城市漫游" />
-                </el-tooltip>
-
-              </el-radio-group>
-            </el-form-item>
-            <el-form-item label="行程核心关注点">
-              <el-checkbox-group v-model="form.travelFocus" :size="formItemSize">
-                <el-tooltip 
+          <div class="popup-title">请完成下面的问卷调查</div>
+          <div class="profile-form">
+            <div class="form-item">
+              <div class="form-label">旅行人数</div>
+              <var-input v-model="form.travelNumber" placeholder="输入旅行人数(个)" />
+            </div>
+            <div class="form-item">
+              <div class="form-label">旅行天数</div>
+              <var-input v-model="form.travelDays" placeholder="输入旅行消耗时间(天)" />
+            </div>
+            <div class="form-item">
+              <div class="form-label">旅行预算</div>
+              <var-input v-model="form.travelBudget" placeholder="输入您期望的预算(元)" />
+            </div>
+            <div class="form-item">
+              <div class="form-label">出发日期</div>
+              <input type="date" v-model="form.startDate" class="native-date-input" />
+            </div>
+            <div class="form-item">
+              <div class="form-label">出发地点</div>
+              <var-input v-model="form.originPlace" placeholder="输入您期望的出发地点" />
+            </div>
+            <div class="form-item">
+              <div class="form-label">交通方式</div>
+              <var-radio-group v-model="form.travelMethod">
+                <var-radio checked-value="驾车">驾车</var-radio>
+                <var-radio checked-value="骑行">骑行</var-radio>
+                <var-radio checked-value="公共交通">公共交通</var-radio>
+                <var-radio checked-value="步行">步行</var-radio>
+              </var-radio-group>
+            </div>
+            <div class="form-item">
+              <div class="form-label">出行风格</div>
+              <var-radio-group v-model="form.travelStyle">
+                <var-radio checked-value="松弛度假">松弛度假</var-radio>
+                <var-radio checked-value="高效打卡">高效打卡</var-radio>
+                <var-radio checked-value="人文深度">人文深度</var-radio>
+                <var-radio checked-value="自然户外">自然户外</var-radio>
+                <var-radio checked-value="美食寻味">美食寻味</var-radio>
+                <var-radio checked-value="城市漫游">城市漫游</var-radio>
+              </var-radio-group>
+            </div>
+            <div class="form-item">
+              <div class="form-label">行程核心关注点</div>
+              <var-checkbox-group v-model="form.travelFocus">
+                <var-checkbox 
                   v-for="(travelFocusOption, index) in travelFocusOptions" 
                   :key="travelFocusOption"
-                  placement="top"
-                  transition="none"
-                  :show-after="0"
-                  :hide-after="0"
+                  :checked-value="travelFocusOption"
                 >
-                  <template #content>
-                    <div style="font-size: 14px; max-width: 200px; line-height: 1.4;">
-                      {{ travelFocusTips[index] }}
-                    </div>
-                  </template>
-                  <el-checkbox-button :label="travelFocusOption" :value="travelFocusOption" />
-                </el-tooltip>
-              </el-checkbox-group>
-            </el-form-item>
-            <el-form-item label="个性化出行习惯">
-              <el-checkbox-group v-model="form.customHabit" :size="formItemSize">
-                <el-checkbox-button v-for="travelCustomOption in travelCustomOptions" :key="travelCustomOption" :label="travelCustomOption" :value="travelCustomOption" :disabled="isCustomOptionsDisabled(travelCustomOption)"/>
-              </el-checkbox-group>
-            </el-form-item>
-             <el-form-item label="其他个性要求" >
-              <el-input v-model="form.additionalRequirements" style="width: 100%" placeholder="输入其他个性要求" :disabled="isNeedAdditionInput"/>
-            </el-form-item>
-            
-          </el-form>
-          <template #footer>
-            <div class="drawer-footer">
-              <el-button @click="cancelBtn" :size="formItemSize">取消</el-button>
-              <el-button type="primary" @click="handleConfirm" :size="formItemSize" :disabled="!isFormValid">确定</el-button>
+                  {{ travelFocusOption }}
+                </var-checkbox>
+              </var-checkbox-group>
             </div>
-          </template>
-        </el-drawer>
+            <div class="form-item">
+              <div class="form-label">个性化出行习惯</div>
+              <var-checkbox-group v-model="form.customHabit">
+                <var-checkbox 
+                  v-for="travelCustomOption in travelCustomOptions" 
+                  :key="travelCustomOption" 
+                  :checked-value="travelCustomOption" 
+                  :disabled="isCustomOptionsDisabled(travelCustomOption)"
+                >
+                  {{ travelCustomOption }}
+                </var-checkbox>
+              </var-checkbox-group>
+            </div>
+             <div class="form-item">
+              <div class="form-label">其他个性要求</div>
+              <var-input v-model="form.additionalRequirements" placeholder="输入其他个性要求" :disabled="isNeedAdditionInput"/>
+            </div>
+            
+          </div>
+          <div class="drawer-footer">
+            <var-button @click="cancelBtn">取消</var-button>
+            <var-button type="primary" @click="handleConfirm" :disabled="!isFormValid">确定</var-button>
+          </div>
+        </var-popup>
 
         <!-- 社交平台发布抽屉 -->
-        <el-drawer 
-          v-model="socialDrawerVisible" 
-          title="选择发布的平台" 
-          :size="drawerSize"
+        <var-popup 
+          v-model:show="socialDrawerVisible" 
+          :position="drawerDirection"
+          :style="{ width: drawerDirection === 'right' ? drawerSize : '100%', height: drawerDirection === 'bottom' ? drawerSize : '100%' }"
           class="info-drawer"
-          :direction="drawerDirection"
-          append-to-body
         >
-          <el-form :model="socialForm" class="profile-form" :label-position="labelPosition" :label-width="formLabelWidth">
-            <el-form-item label="发布平台">
-              <el-checkbox-group v-model="socialForm.platforms" :size="formItemSize" class="social-checkbox-group">
-                <el-checkbox v-for="option in socialPlatformOptions" :key="option" :label="option" :value="option" border class="social-checkbox-item" />
-              </el-checkbox-group>
-            </el-form-item>
-          </el-form>
-          <template #footer>
-            <div class="drawer-footer">
-              <el-button @click="cancelBtn" :size="formItemSize">取消</el-button>
-              <el-button type="success" :size="formItemSize" :disabled="socialForm.platforms.length === 0" @click="handleSocialConfirm">生成帖子</el-button>
+          <div class="popup-title">选择发布的平台</div>
+          <div class="profile-form">
+            <div class="form-item">
+              <div class="form-label">发布平台</div>
+              <var-checkbox-group v-model="socialForm.platforms" direction="vertical">
+                <var-checkbox v-for="option in socialPlatformOptions" :key="option" :checked-value="option">
+                  {{ option }}
+                </var-checkbox>
+              </var-checkbox-group>
             </div>
-          </template>
-        </el-drawer>
+          </div>
+          <div class="drawer-footer">
+            <var-button @click="cancelBtn">取消</var-button>
+            <var-button type="success" :disabled="socialForm.platforms.length === 0" @click="handleSocialConfirm">生成帖子</var-button>
+          </div>
+        </var-popup>
       </div>
     </section>
   </div>
@@ -215,7 +153,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
-import { ElNotification } from 'element-plus'
+import { Snackbar } from '@varlet/ui'
 import frontImg from '../assets/FRONT_IMG.png'
 import backImg from '../assets/BACK_IMG.png'
 import titleBackImg from '../assets/BIG_TITLE_BACK.webp'
@@ -299,7 +237,7 @@ const checkMobile = () => {
 }
 
 const drawerSize = computed(() => isMobile.value ? '85%' : '900px')
-const drawerDirection = computed(() => isMobile.value ? 'btt' : 'rtl')
+const drawerDirection = computed(() => isMobile.value ? 'bottom' : 'right')
 const labelPosition = computed(() => isMobile.value ? 'top' : 'right')
 const formLabelWidth = computed(() => isMobile.value ? 'auto' : '140px')
 const formItemSize = computed(() => isMobile.value ? 'default' : 'large')
@@ -332,18 +270,16 @@ const handleSocialConfirm = () => {
   socialDrawerVisible.value = false
   emit('navigate', 'aiDialogue')
   
-  ElNotification({
-    title: '正在准备生成',
-    message: '已跳转至 AI 对话页面，请稍后...',
+  Snackbar({
+    content: '已跳转至 AI 对话页面，请稍后...',
     type: 'success',
   })
 }
 
 const handleConfirm = () =>{
   if (!isFormValid.value) {
-    ElNotification({
-      title: '表单不完整',
-      message: '请填写所有表单选项后再提交',
+    Snackbar({
+      content: '请填写所有表单选项后再提交',
       type: 'warning',
     })
     return
@@ -360,17 +296,15 @@ const handleConfirm = () =>{
 const cancelBtn = () => {
   dialogFormVisible.value = false;
   socialDrawerVisible.value = false;
-    ElNotification({
-    title: '您的表单已保存',
-    message: '如果有需要，你可以修改后再次提交。',
+    Snackbar({
+    content: '您的表单已保存，如果有需要，你可以修改后再次提交。',
     type: 'warning',
   })
 }
 
 const afterConfirmMsgBox = () => {
-  ElNotification({
-    title: '您已点击确认按钮',
-    message: '表单已经尝试提交给智能体，请稍后；如果AI无回复重启应用。',
+  Snackbar({
+    content: '表单已经尝试提交给智能体，请稍后；如果AI无回复重启应用。',
     type: 'success',
   })
 }
@@ -386,30 +320,21 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.info-dialog :deep(.el-dialog__header) {
-  text-align: center;
+.info-drawer :deep(.var-popup__content) {
+  padding: 0;
 }
 
 /* 走马灯卡片 */
-.el-carousel__item h3 {
-  color: #475669;
-  opacity: 0.75;
-  line-height: 200px;
-  margin: 0;
-  text-align: center;
-}
-
-.el-carousel__item {
-  background-color: transparent !important;
-}
-
-.custom-carousel :deep(.el-carousel__mask) {
-  background-color: transparent !important;
-}
-
 .custom-carousel {
   width: 100%;
   max-width: 2400px;
+  height: 32vh;
+}
+
+@media (min-width: 769px) {
+  .custom-carousel {
+    height: 425px;
+  }
 }
 
 .carousel-item-content {
@@ -632,11 +557,11 @@ html.dark .bg-overlay {
   color: white !important;
 }
 
-.big-action-btn.el-button--primary {
+.big-action-btn.var-button--primary {
   background: linear-gradient(to right, #83CFF9, #A8A7FE) !important;
 }
 
-.big-action-btn.el-button--success {
+.big-action-btn.var-button--success {
   background: linear-gradient(to right, rgb(43, 208, 123), #5DE1C9) !important;
 }
 
@@ -676,77 +601,101 @@ html.dark .bg-overlay {
   text-align: center;
 }
 
-.button-grid .el-button {
+.index-page {
+  --index-bg: #ffffff;
+  --index-border: #e4e7ed;
+  --index-border-light: #ebeef5;
+  --index-text-primary: #303133;
+  --index-text-secondary: #606266;
+  --index-card-footer-border: #f5f7fa;
+  --index-card-text: #606266;
+}
+
+html.dark .index-page {
+  --index-bg: #1d1e1f;
+  --index-border: #4c4d4f;
+  --index-border-light: #363637;
+  --index-text-primary: #e5eaf3;
+  --index-text-secondary: #a3a6ad;
+  --index-card-footer-border: #1a1a1a;
+  --index-card-text: #e4e7ed;
+}
+
+.button-grid .var-button {
   width: 100%;
 }
 
-.button-grid .el-button + .el-button {
+.button-grid .var-button + .var-button {
   margin-left: 0;
 }
 
-.feature-card .el-card__body p {
+.feature-card .var-card__body p {
   font-size: 16px;
   line-height: 1.8;
+  color: var(--index-card-text);
 }
 .card-header h2 {
   font-size: 20px;
   margin: 0;
+  color: var(--index-text-primary);
 }
 
-.feature-card :deep(.el-card__footer) {
+.feature-card :deep(.var-card__footer) {
   text-align: right;
+  border-top: 1px solid var(--index-card-footer-border);
 }
-
-html.dark .feature-card :deep(.el-card__footer) {
-  /* 首页卡片页脚分割线颜色，默认与背景颜色一致 */
-  border-top-color: #1A1A1A;
-}
-
-html.dark .feature-card .el-card__body p {
-  /* 用户画像卡片描述字体颜色 */
-  color: #e4e7ed;
-}
-
-html.dark .card-header h2 {
-  /* 用户画像卡片头部标题字体颜色 */
-  color: #e4e7ed;
-}
-
 
 .info-drawer {
-  background-color: rgba(0, 0, 0, 0.55) !important;
+  background-color: var(--index-bg) !important;
+  display: flex;
+  flex-direction: column;
 }
 
-.info-drawer :deep(.el-drawer__header) {
-  margin-bottom: 20px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--el-border-color-lighter);
+.popup-title {
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  padding: 15px;
+  border-bottom: 1px solid var(--index-border-light);
+  color: var(--index-text-primary);
 }
 
-.info-drawer :deep(.el-drawer__body) {
-  position: relative;
+.profile-form {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
 }
 
-.info-drawer :deep(.el-drawer__body)::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.55);
-  pointer-events: none;
+.form-item {
+  margin-bottom: 24px;
+}
+
+.form-label {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--index-text-primary);
 }
 
 .drawer-footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  padding-top: 20px;
+  padding: 15px 20px;
+  border-top: 1px solid var(--index-border-light);
+  background-color: var(--index-bg);
 }
 
-.drawer-footer :deep(.el-button) {
-  font-size: 18px;
+.native-date-input {
+  width: 100%;
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid var(--index-border);
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+  color: var(--index-text-primary);
+  background: var(--index-bg);
 }
 
 .social-checkbox-group {
@@ -758,53 +707,5 @@ html.dark .card-header h2 {
 
 .social-checkbox-item {
   width: 100%;
-  margin-left: 0 !important;
-  margin-right: 0 !important;
-  height: auto !important;
-  padding: 12px 20px !important;
-}
-
-.social-checkbox-item :deep(.el-checkbox__label) {
-  font-size: 16px;
-}
-
-.profile-form :deep(.el-form-item) {
-  margin-bottom: 24px;
-  font-size: 16px !important;
-  width: 100%;
-}
-
-.profile-form :deep(.el-form-item__label) {
-  font-size: 16px !important;
-  text-align: left;
-}
-
-@media (min-width: 769px) {
-  .profile-form :deep(.el-form-item__label) {
-    justify-content: flex-end;
-    min-width: 160px !important;
-  }
-}
-
-.profile-form :deep(.el-radio-button__inner) {
-  font-size: 16px !important;
-}
-
-.profile-form :deep(.el-form-item__content) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-start;
-}
-
-.profile-form :deep(.radio-wrap) {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  justify-content: flex-start;
-}
-
-.profile-form :deep(.el-form-item__content::-webkit-scrollbar) {
-  display: none;
 }
 </style>

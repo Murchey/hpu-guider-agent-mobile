@@ -1,10 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
-
-// 整体黑色模式文件，与小组件的背景颜色相关
-import 'element-plus/theme-chalk/dark/css-vars.css'
+import Varlet, { StyleProvider, Themes } from '@varlet/ui'
+import '@varlet/ui/es/style'
 
 import App from './App.vue'
  
@@ -12,11 +9,12 @@ const app = createApp(App)
 const pinia = createPinia()
 
 app.use(pinia)
-app.use(ElementPlus)
+app.use(Varlet)
 
 const applyTheme = (isDark: boolean) => {
   document.documentElement.classList.toggle('dark', isDark)
   document.body.classList.toggle('dark', isDark)
+  StyleProvider(isDark ? Themes.dark : null)
 }
 
 const saved = localStorage.getItem('theme-mode')
