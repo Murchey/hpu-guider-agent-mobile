@@ -7,7 +7,11 @@
       </div>
       
       <div v-show="activeName === 'aiDialogue'" class="tab-pane">
-        <AiDialoguePage :active-tab="activeName" @navigate="handleNavigate" />
+        <AiDialoguePage 
+          :active-tab="activeName" 
+          @navigate="handleNavigate" 
+          @input-focus="handleInputFocus"
+        />
       </div>
       
       <div v-show="activeName === 'mapPlanning'" class="tab-pane">
@@ -21,7 +25,7 @@
     </div>
 
     <!-- 自定义底部导航栏 -->
-    <div class="custom-bottom-nav">
+    <div v-show="!(isInputFocused && isMobile)" class="custom-bottom-nav">
       <div 
         class="nav-item" 
         :class="{ active: activeName === 'indexPage' }"
@@ -59,7 +63,7 @@
 </template>
 
 <script lang="ts" setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import IndexPage from './components/IndexPage.vue'
 import AiDialoguePage from './components/AiDialoguePage.vue'
 import MapPlanningPage from './components/MapPlanningPage.vue'
@@ -68,12 +72,24 @@ import { useThemeStore } from './stores/themeStore'
 
 const themeStore = useThemeStore()
 const activeName = ref('indexPage')
+const isInputFocused = ref(false)
+const isMobile = ref(false)
+
+const checkMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+}
 
 const handleNavigate = (tabName: string) => {
   activeName.value = tabName
 }
 
+const handleInputFocus = (focused: boolean) => {
+  isInputFocused.value = focused
+}
+
 onMounted(() => {
+  checkMobile()
+  window.addEventListener('resize', checkMobile)
   themeStore.loadTheme()
 
   // 处理手机切屏/后台挂起逻辑
@@ -86,6 +102,10 @@ onMounted(() => {
       // 可以在此处检查配置是否需要重载
     }
   })
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkMobile)
 })
 </script>
 

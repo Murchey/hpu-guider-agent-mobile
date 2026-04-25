@@ -15,10 +15,10 @@
       </div>
       <div class="chat-messages" ref="messagesRef">
         <div v-if="messages.length === 0 && !isSettingsLoaded" class="empty-tip">
-          <var-result class="result-empty" :image="agentIcon" title="加载设置中..." />
+          <var-result class="result-empty" :image="agentIcon" :img-size="emptyImageSize" title="加载设置中..." />
         </div>
         <div v-else-if="messages.length === 0" class="empty-tip">
-          <var-result class="result-empty" :image="agentIcon" :title="welcomeMessage" />
+          <var-result class="result-empty" :image="agentIcon" :img-size="emptyImageSize" :title="welcomeMessage" />
         </div>
         
         <div
@@ -98,15 +98,15 @@
       
       <div class="chat-input-container">
         <!-- 图片预览区域 -->
-        <div v-if="uploadedImageUrl" class="image-preview-floating">
-          <div class="image-preview-wrapper">
+        <div v-if="uploadedImages.length > 0" class="image-preview-floating">
+          <div v-for="(img, index) in uploadedImages" :key="index" class="image-preview-wrapper">
             <var-image 
-              :src="uploadedImageUrl" 
+              :src="img.url" 
               class="image-preview" 
               fit="cover"
               ripple
             />
-            <var-icon class="remove-image-btn" name="close-circle" @click="removeUploadedImage" />
+            <var-icon class="remove-image-btn" name="close-circle" @click="removeUploadedImage(index)" />
           </div>
           <div v-if="isUploadingImage" class="upload-loading-overlay">
             <var-loading type="circle" size="small" />
@@ -140,13 +140,13 @@
             <!-- 上传图片（作为前缀图标） -->
             <var-uploader
               v-model="fileList"
-              class="pill-uploader"
+              class="pill-uploader var-uploader--outline-none"
               accept="image/*"
-              :maxlength="1"
               :disabled="isLoading"
               @after-read="handleFileChange"
               @remove="removeUploadedImage"
               hide-list
+              multiple
             >
               <var-button text round class="secondary-icon-btn upload-btn">
                 <var-icon name="image-outline" :size="22" />
@@ -171,6 +171,8 @@
               :line="false"
               @keydown.enter.exact.prevent="handleSend"
               @keydown.shift.enter.prevent="handleNewLine"
+              @focus="emit('input-focus', true)"
+              @blur="emit('input-focus', false)"
             />
           </div>
 
@@ -363,6 +365,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'navigate', tabName: string): void
+  (e: 'input-focus', focused: boolean): void
 }>()
 
 const chatStore = useChatStore()
@@ -427,8 +430,7 @@ const handleDeleteMessage = (index: number) => {
 }
 
 // 图片上传相关
-const uploadedImageUrl = ref('')
-const uploadedFileId = ref('')
+const uploadedImages = ref<{ url: string; id: string }[]>([])
 const isUploadingImage = ref(false)
 const fileList = ref<any[]>([])
 
@@ -436,21 +438,25 @@ const handleFileChange = async (file: any) => {
   const rawFile = file.file
   if (!rawFile) return
 
-  // 限制图片大小 10MB
-  if (rawFile.size / 1024 / 1024 > 10) {
-    Snackbar.error('图片大小不能超过 10MB')
-    fileList.value = []
-    return
-  }
-
   // 根据模式处理图片
   const { imageMode } = apiSettings.value
   
   if (imageMode === 'coze') {
     // 生成预览
-    uploadedImageUrl.value = URL.createObjectURL(rawFile)
+    const url = URL.createObjectURL(rawFile)
     // 自动上传到 Coze
-    await uploadImageToCoze(rawFile)
+    isUploadingImage.value = true
+    try {
+      const fileId = await uploadImageToCoze(rawFile)
+      if (fileId) {
+        uploadedImages.value.push({ url, id: fileId })
+        Snackbar.success('图片上传成功')
+      }
+    } catch (error: any) {
+      Snackbar.error('上传失败: ' + error.message)
+    } finally {
+      isUploadingImage.value = false
+    }
   } else {
     // Base64 模式 (适配硅基流动等)
     isUploadingImage.value = true
@@ -458,8 +464,7 @@ const handleFileChange = async (file: any) => {
       const reader = new FileReader()
       reader.onload = (e) => {
         const base64 = e.target?.result as string
-        uploadedImageUrl.value = base64
-        uploadedFileId.value = base64 // 在 base64 模式下，直接存 base64 字符串
+        uploadedImages.value.push({ url: base64, id: base64 })
         Snackbar.success('图片已就绪')
         isUploadingImage.value = false
       }
@@ -474,46 +479,40 @@ const handleFileChange = async (file: any) => {
   }
 }
 
-const removeUploadedImage = () => {
-  uploadedImageUrl.value = ''
-  uploadedFileId.value = ''
-  fileList.value = []
+const removeUploadedImage = (index?: any) => {
+  if (typeof index === 'number') {
+    uploadedImages.value.splice(index, 1)
+    fileList.value.splice(index, 1)
+  } else {
+    uploadedImages.value = []
+    fileList.value = []
+  }
 }
 
 const uploadImageToCoze = async (file: File) => {
   if (!apiSettings.value.apiKey) {
     Snackbar.warning('上传图片需要先配置 API Key')
-    return
+    return null
   }
 
-  isUploadingImage.value = true
-  try {
-    const { baseURL, apiKey } = apiSettings.value
-    // Coze 文件上传地址固定为 /v1/files/upload
-    const uploadURL = baseURL.replace(/\/v3\/chat$/, '').replace(/\/+$/, '') + '/v1/files/upload'
-    
-    const formData = new FormData()
-    formData.append('file', file)
+  const { baseURL, apiKey } = apiSettings.value
+  // Coze 文件上传地址固定为 /v1/files/upload
+  const uploadURL = baseURL.replace(/\/v3\/chat$/, '').replace(/\/+$/, '') + '/v1/files/upload'
+  
+  const formData = new FormData()
+  formData.append('file', file)
 
-    const response = await axios.post(uploadURL, formData, {
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'multipart/form-data'
-      }
-    })
-
-    if (response.data && response.data.data && response.data.data.id) {
-      uploadedFileId.value = response.data.data.id
-      Snackbar.success('图片上传成功')
-    } else {
-      throw new Error(response.data.msg || '上传失败')
+  const response = await axios.post(uploadURL, formData, {
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'multipart/form-data'
     }
-  } catch (error: any) {
-    console.error('上传图片到 Coze 失败:', error)
-    Snackbar.error('上传图片失败: ' + (error.response?.data?.msg || error.message))
-    removeUploadedImage()
-  } finally {
-    isUploadingImage.value = false
+  })
+
+  if (response.data && response.data.data && response.data.data.id) {
+    return response.data.data.id
+  } else {
+    throw new Error(response.data.msg || '上传失败')
   }
 }
 
@@ -741,14 +740,6 @@ const handleSelectSession = (id: string) => {
 }
 
 const handleRenameSession = (id: string, oldTitle: string) => {
-  Dialog({
-    title: '重命名对话',
-    message: '请输入新的对话标题',
-    // Varlet doesn't have prompt out of the box in Dialog, but we can simulate or just not use prompt directly.
-    // For simplicity, we just use prompt natively since Varlet doesn't have prompt dialog by default,
-    // or we skip it. Let's use window.prompt for mobile or custom input.
-  })
-  
   const value = window.prompt('请输入新的对话标题', oldTitle)
   if (value && value.trim()) {
     chatStore.renameChat(id, value.trim())
@@ -796,12 +787,11 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
   requestMessages.push({ role: 'user', content: text })
 
   // 记录本次发送的图片（如果有）
-  const currentImageUrl = uploadedImageUrl.value
-  const currentFileId = uploadedFileId.value
+  const currentImages = [...uploadedImages.value]
   
   // 清除输入区图片状态
-  uploadedImageUrl.value = ''
-  uploadedFileId.value = ''
+  uploadedImages.value = []
+  fileList.value = []
 
   const newMessages = [...messages.value]
 
@@ -809,7 +799,7 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
     newMessages.push({ 
       role: 'user', 
       content: text,
-      imageUrl: currentImageUrl 
+      imageUrl: currentImages.length > 0 ? currentImages[0].url : '' // 目前 UI 仅支持显示一张，但后端可以支持多张
     })
     chatStore.updateMessages(newMessages)
     await scrollToBottom()
@@ -840,9 +830,9 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
       
       // 构建 Coze 多模态内容 (object_string)
       const contentList: any[] = [{ type: 'text', text: text }]
-      if (currentFileId) {
-        contentList.push({ type: 'image', file_id: currentFileId })
-      }
+      currentImages.forEach(img => {
+        contentList.push({ type: 'image', file_id: img.id })
+      })
 
       const response = await fetch(`${finalBaseURL}/v3/chat`, {
         method: 'POST',
@@ -926,17 +916,20 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
       let finalMessages: any[] = [...requestMessages]
       
       // 如果有图片，替换最后一条消息为多模态格式
-      if (currentFileId && currentFileId.startsWith('data:image')) {
+      if (currentImages.length > 0) {
         const lastMsg = finalMessages.pop()
+        const content: any[] = [{ type: 'text', text: lastMsg?.content || text }]
+        currentImages.forEach(img => {
+          if (img.id.startsWith('data:image')) {
+            content.push({ 
+              type: 'image_url', 
+              image_url: { url: img.id } 
+            })
+          }
+        })
         finalMessages.push({
           role: 'user',
-          content: [
-            { type: 'text', text: lastMsg?.content || text },
-            { 
-              type: 'image_url', 
-              image_url: { url: currentFileId } 
-            }
-          ]
+          content: content
         })
       }
 
@@ -1507,6 +1500,13 @@ html.dark .pill-textarea :deep(.var-field-decorator__placeholder) {
   margin-left: 54px; /* 对齐左侧上传按钮中心 */
   margin-bottom: 8px;
   pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.var-uploader--outline-none :deep(.var-uploader__action) {
+  outline: none;
 }
 
 .image-preview-floating .image-preview-wrapper {
@@ -2161,7 +2161,21 @@ html.dark .rename-btn:hover {
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 10px;
+  padding-bottom: 15vh; /* 略微上移，视觉中心更平衡 */
+}
+
+.result-empty :deep(.var-result__image) {
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border: 4px solid var(--chat-surface);
+}
+
+.result-empty :deep(.var-result__title) {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--chat-text-secondary);
 }
 
 html.dark .chat-container {
