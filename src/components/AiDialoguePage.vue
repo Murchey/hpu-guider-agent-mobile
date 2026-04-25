@@ -89,7 +89,7 @@
           </div>
           <div class="message-content">
             <div class="message-card loading-card">
-              <var-loading type="circle" :size="20" color="var(--color-primary)" />
+              <var-loading type="circle" size="normal" color="var(--color-primary)" />
               <span style="margin-left: 8px;">文途智行正在思考中...</span>
             </div>
           </div>
@@ -109,7 +109,7 @@
             <var-icon class="remove-image-btn" name="close-circle" @click="removeUploadedImage" />
           </div>
           <div v-if="isUploadingImage" class="upload-loading-overlay">
-            <var-loading type="circle" :size="16" />
+            <var-loading type="circle" size="small" />
           </div>
         </div>
 
