@@ -42,6 +42,7 @@
                 class="message-image" 
                 fit="cover" 
                 ripple
+                @click="previewImage(msg.imageUrl)"
               />
             </div>
             <div class="message-card" :class="msg.role">
@@ -96,7 +97,7 @@
         </div>
       </div>
       
-      <div class="chat-input-container">
+      <div class="chat-input-container" :class="{ 'input-focused': isInputFocused && isMobile }">
         <!-- 图片预览区域 -->
         <div v-if="uploadedImages.length > 0" class="image-preview-floating">
           <div v-for="(img, index) in uploadedImages" :key="index" class="image-preview-wrapper">
@@ -171,8 +172,8 @@
               :line="false"
               @keydown.enter.exact.prevent="handleSend"
               @keydown.shift.enter.prevent="handleNewLine"
-              @focus="emit('input-focus', true)"
-              @blur="emit('input-focus', false)"
+              @focus="() => { isInputFocused = true; emit('input-focus', true); }"
+              @blur="() => { isInputFocused = false; emit('input-focus', false); }"
             />
           </div>
 
@@ -347,7 +348,7 @@
 
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted, computed, watch } from 'vue'
-import { Snackbar, Dialog } from '@varlet/ui'
+import { Snackbar, Dialog, ImagePreview } from '@varlet/ui'
 import axios from 'axios'
 import MarkdownIt from 'markdown-it'
 import agentIcon from '../assets/agent_icon.jpg'
@@ -378,11 +379,16 @@ watch(messages, () => {
 
 const inputText = ref('')
 const isLoading = ref(false)
+const isInputFocused = ref(false)
 const messagesRef = ref<HTMLElement | null>(null)
 
 // 消息编辑相关
 const editingIndex = ref<number | null>(null)
 const editingText = ref('')
+
+const previewImage = (url: string) => {
+  ImagePreview(url)
+}
 
 const startEdit = (index: number, content: string) => {
   editingIndex.value = index
@@ -1275,6 +1281,11 @@ html.dark .ai-dialogue-page {
   pointer-events: none; /* 让预览区域不阻挡点击，子元素再恢复 */
 }
 
+.chat-input-container.input-focused {
+  bottom: 0;
+  z-index: 1001;
+}
+
 .gemini-input-pill {
   display: flex;
   align-items: center;
@@ -1887,11 +1898,13 @@ html.dark .image-preview-floating .remove-image-btn {
 
 .message-image-wrapper {
   margin-bottom: 8px;
-  max-width: 300px;
+  width: 50px;
+  height: 50px;
 }
 
 .message-image {
   width: 100%;
+  height: 100%;
   border-radius: 8px;
   cursor: zoom-in;
 }
