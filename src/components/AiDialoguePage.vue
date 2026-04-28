@@ -840,7 +840,7 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
   try {
     const { baseURL, apiKey, model, provider, botId, imageMode } = apiSettings.value
     
-    let finalBaseURL = baseURL || providerConfigs[provider]?.baseURL || ''
+    let finalBaseURL = (baseURL || providerConfigs[provider]?.baseURL || '').trim()
     if (!finalBaseURL) {
       throw new Error('API 地址不能为空，请在设置中配置正确的 API 地址')
     }
@@ -852,6 +852,8 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
 
     if (imageMode === 'coze') {
       if (!botId) throw new Error('Coze 模式下必须配置 Bot ID')
+      const cleanBotId = botId.trim()
+      const cleanApiKey = apiKey.trim()
       
       // 构建 Coze 多模态内容 (object_string)
       const contentList: any[] = [{ type: 'text', text: text }]
@@ -874,11 +876,11 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
       const response = await fetch(`${finalBaseURL}/v3/chat`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${cleanApiKey}`,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          bot_id: botId,
+          bot_id: cleanBotId,
           user_id: getOrCreateCozeUserId(),
           additional_messages: additionalMessages,
           stream: true
@@ -912,6 +914,9 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
               newMessages[assistantMsgIndex].content = aiContent
               chatStore.updateMessages(newMessages)
             } catch (err: any) {
+              if (err.message.includes('接口隐式报错')) {
+                throw err
+              }
               console.warn('尝试非流式兜底解析失败:', err, buffer)
             }
           }
@@ -940,10 +945,17 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
               if (
                 currentEvent === 'conversation.message.delta'
                 || currentEvent === 'conversation.message.completed'
-                || !currentEvent
               ) {
+                // Coze 返回的 type='answer' 才属于真正的回答内容
+                if (data.type && data.type !== 'answer') {
+                  continue
+                }
                 const delta = data.content || data.message?.content || data.choices?.[0]?.delta?.content || ''
                 if (delta) {
+                  // 过滤掉内部流式标记，例如 {"msg_type":"generate_answer_finish"} 这种
+                  if (delta.includes('"msg_type"') || delta.includes('"generate_answer_finish"')) {
+                    continue
+                  }
                   if (currentEvent === 'conversation.message.completed' && aiContent.includes(delta)) {
                     continue
                   }
@@ -952,10 +964,12 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
                   chatStore.updateMessages(newMessages)
                   scrollToBottom()
                 }
-              } else if (currentEvent === 'error' || data.event === 'error' || data.code !== 0) {
+              } else if (currentEvent === 'error' || data.event === 'error' || (data.code !== undefined && data.code !== 0)) {
                 const errorMsg = data.msg || data.message || JSON.stringify(data)
                 throw new Error(`AI 流式错误: ${errorMsg}`)
               }
+              // Coze 其它事件（如 conversation.chat.created/in_progress 等），不抛出错误，直接跳过
+
             } catch (e: any) {
               if (e.message.includes('AI 流式错误')) throw e
               console.warn('JSON 片段解析失败，可能并非错误:', e.message, dataContent)
@@ -964,6 +978,8 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
         }
       }
     } else {
+      const cleanApiKey = apiKey.trim()
+      const cleanModel = model.trim()
       // OpenAI 兼容 API 流式 (支持 Base64 多模态)
       let finalMessages: any[] = [...requestMessages]
       
@@ -989,10 +1005,10 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
+          'Authorization': `Bearer ${cleanApiKey}`
         },
         body: JSON.stringify({
-          model: model,
+          model: cleanModel,
           messages: finalMessages,
           stream: true
         }),
@@ -1023,6 +1039,9 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
               newMessages[assistantMsgIndex].content = aiContent
               chatStore.updateMessages(newMessages)
             } catch (err: any) {
+              if (err.message.includes('接口隐式报错')) {
+                throw err
+              }
               console.warn('尝试 OpenAI 兼容接口的非流式兜底解析失败:', err, buffer)
             }
           }
@@ -1108,8 +1127,22 @@ const sendMessage = async (text: string, showUserMessage: boolean) => {
     }
     console.error('发送消息失败:', error)
     let errorMsg = error?.message || String(error)
+    
+    // 特殊处理 Coze 认证等接口隐式报错
+    if (errorMsg.includes('接口隐式报错')) {
+      try {
+        const errObjStr = errorMsg.replace('接口隐式报错:', '').trim()
+        const errObj = JSON.parse(errObjStr)
+        if (errObj.msg) {
+          errorMsg = errObj.msg
+        }
+      } catch (e) {
+        // 保持原样
+      }
+    }
+    
     if (errorMsg === 'Failed to fetch' || error?.name === 'TypeError') {
-      errorMsg = '网络连接中断，请检查网络设置或尝试重新发送。'
+      errorMsg = '网络连接中断，请检查网络设置。如果是本地大模型服务（如Ollama），请确保手机端配置的是电脑局域网IP（如192.168.x.x）而不是 localhost。'
     }
     newMessages[assistantMsgIndex].content = `❌ 请求失败：${errorMsg}\n\n请检查设置或网络。`
     chatStore.updateMessages(newMessages)
@@ -1268,14 +1301,14 @@ const checkAndSendUserProfile = () => {
                       9. 出发地（originPlace）: ${formData.originPlace || '未填写'}\n
                       请调用你的工作流进行用户喜好分析，下面的对话内容要基于此进行。明白回复我：我已读取用户画像，下面根据你的喜好进行对话咨询。`
       
-      sendUserProfileWithRetry(prompt, formData)
+      sendUserProfileWithRetry(prompt)
     } catch (e) {
       console.error('加载用户画像失败', e)
     }
   }
 }
 
-const sendUserProfileWithRetry = async (prompt: string, formData: any) => {
+const sendUserProfileWithRetry = async (prompt: string) => {
   const maxRetries = 5
   for (let i = 0; i < maxRetries; i++) {
     try {

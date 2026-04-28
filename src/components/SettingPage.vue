@@ -343,20 +343,16 @@ const applyManualApiSettings = () => {
     enableModePrefix.value = savedModePrefix === 'true'
   }
 
-  // 只有当本地没有配置时，才初始化默认的 Coze 配置
-  if (!localStorage.getItem('ai-chat-settings')) {
-    localStorage.setItem('ai-chat-settings', JSON.stringify(MANUAL_API_SETTINGS))
-  } else {
-    // 如果本地已有配置，尝试回填到自定义表单中
-    try {
-      const saved = JSON.parse(localStorage.getItem('ai-chat-settings') || '{}')
-      if (saved.provider !== 'coze') {
-        Object.assign(CUSTOM_API_SETTINGS, saved)
-        showCustomSettings.value = true
-      }
-    } catch (e) {
-      console.error('Failed to parse settings', e)
+  // 强制覆盖更新默认配置，以防代码里的 token 变了但本地 localStorage 还是旧的
+  localStorage.setItem('ai-chat-settings', JSON.stringify(MANUAL_API_SETTINGS))
+
+  try {
+    const saved = localStorage.getItem('ai-chat-settings')
+    if (saved) {
+      Object.assign(CUSTOM_API_SETTINGS, JSON.parse(saved))
     }
+  } catch (e) {
+    // ignore
   }
 }
 
