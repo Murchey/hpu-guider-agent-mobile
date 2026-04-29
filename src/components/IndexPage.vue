@@ -372,7 +372,7 @@ onUnmounted(() => {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center; /* 居中内容，而不是贴顶 */
   align-items: center;
   padding: 3vh 0; /* 略微下调垂直边距 */
   position: relative;
@@ -462,30 +462,40 @@ html.dark .bg-overlay {
   box-sizing: border-box;
   position: relative;
   z-index: 20;
+  margin-top: -6vh; /* 向上移动一点 */
 }
 
 .welcome-title {
   font-size: 42px; /* 从 48px 下调 */
-  color: #3b94ec;
+  color: #151c65;
   margin-bottom: 5px;
   font-weight: 800;
   letter-spacing: 1px;
   text-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
+html.dark .welcome-title {
+  color: #FFFFFF;
+}
+
 .welcome-subtitle {
   font-size: 16px; /* 从 18px 下调 */
-  color: #5ea6f0;
+  color: #151C65; /* 浅色模式下与主标题颜色一致 */
   margin: 3px 0;
   font-weight: 500;
 }
 
+html.dark .welcome-subtitle {
+  color: rgba(255, 255, 255, 0.75); /* 暗色模式下比纯白浅一点 */
+}
+
 .carousel-section {
   width: 100%;
-  margin-top: 15px; /* 减少间距 */
+  margin: 4vh auto; /* 取消绝对定位后，通过 margin 调整间距并使其居中 */
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  position: relative; /* 保证在流式布局中居中 */
 }
 
 .action-buttons {
@@ -516,15 +526,6 @@ html.dark .bg-overlay {
   .carousel-section {
     margin-top: 20px;
   }
-}
-
-.welcome-subtitle {
-  position: relative;
-  z-index: 2;
-  font-size: 24px;
-  color: #3b94ec;
-  margin-bottom: 20px;
-  pointer-events: none;
 }
 
 .action-buttons {
@@ -576,7 +577,7 @@ html.dark .bg-overlay {
   z-index: 3;
   width: 100%;
   max-width: 1800px;
-  margin: 0 auto 30px auto;
+  margin: 4vh auto;
 }
 
 .carousel-title {
